@@ -5,7 +5,12 @@ import anthropic
 from MLAgentBench.LLM import complete_text_fast, complete_text
 from MLAgentBench.schema import Action
 from .agent import Agent
-from codecarbon import EmissionsTracker
+try:
+    from codecarbon import EmissionsTracker
+    HAVE_CODECARBON = True
+except ImportError:
+    HAVE_CODECARBON = False
+
 
 initial_prompt = """You are a helpful research assistant. You have access to the following tools:
 {tools_prompt}
@@ -43,6 +48,60 @@ format_prompt_dict = {
     "Action": "the action to take, should be one of the names of the tools",
     "Action Input": "the input to the action as a valid JSON string",
 }
+
+#INVALID_RESPONSE_MSG
+INVALID_RESPONSE_INSTRUCTIONS = """
+Response is invalid and discarded.
+
+You MUST answer in EXACTLY this format:
+
+Thought: <your reasoning in one or two sentences>
+Action: <ONE tool name from the list below>
+Action Input: <a VALID JSON object with the arguments for that tool>
+
+The ONLY valid Action names are (case-sensitive):
+
+Low-level tools:
+- List Files
+- Read File
+- Write File
+- Append File
+- Copy File
+- Undo Edit Script
+- Execute Script
+- Python REPL
+- Final Answer
+
+High-level tools:
+- Understand File
+- Append Summary to Research Log
+- Inspect Script Lines
+- Edit Script (AI)
+- Edit Script Segment (AI)
+- Reflection
+- Retrieval from Research Log
+
+Do NOT invent new action names like "Research Plan and Status" or
+"the action to take, should be one of the names of the tools".
+Those strings are instructions, NOT tools.
+
+The Action line MUST be exactly one of the tool names above.
+The Action Input MUST be a valid JSON object.
+# If we want to use the response format more strictly, we can add these lines to the instructions:
+#Do NOT add extra sections or headings. Only:
+#Thought:
+#Action:
+#Action Input:
+""".strip()
+
+# If we want to use the response format more strictly, we can add these lines to the instructions:
+#Do NOT add extra sections or headings. Only:
+#Thought:
+#Action:
+#Action Input:
+
+# If we want to use the oroiginal response format with more sections, we can add these lines to the instructions:
+# Do NOT add extra sections or headings beyond these six required sections.
 
 
 class ResearchAgent(Agent):
@@ -109,41 +168,77 @@ class ResearchAgent(Agent):
 
             entries = None
             valid_response = False
-            for attempt in range(self.args.max_retries):
-                log_file = os.path.join(self.log_dir , f"step_{curr_step}_log.log")
-                #completion = complete_text(prompt, log_file, self.args.llm_name)
 
-                # -----------CodeCarbon alrededor de la llamada al LLM -----------)
+            # --- CONFIGURATION PER STEP (NOT PER RETRY) ---
+            log_file = os.path.join(self.log_dir , f"step_{curr_step}_log.log")
+
+            # CodeCarbon: only one tracker per agents step
+            tracker = None
+            use_cc = getattr(self.args, "use_codecarbon", False)
+            
+            
+            if use_cc and HAVE_CODECARBON:
                 cc_dir = os.path.join(self.args.log_dir, "codecarbon")
                 os.makedirs(cc_dir, exist_ok=True)
                 tracker = EmissionsTracker(
-                    project_name=f"{self.args.task}-llm",
+                    project_name=f"{self.args.task}-{self.args.agent_type}-{self.args.llm_name}",
                     output_dir=cc_dir,
-                    output_file=f"step_{curr_step:04d}_LLM_attempt_{attempt+1}.csv",
-                    measure_power_secs=1,     # 1–5 s recomendado
+                    output_file=f"step_{curr_step:04d}_LLM.csv",  
+                    measure_power_secs=1,
                     save_to_file=True,
                     log_level="error",
-                    #offline= True,  # descomentar si no hay conexión a internet
-                    #country_iso_code="ITA",  # ajustar según sea necesario
                     gpu_ids=[self.args.device] if isinstance(self.args.device, int) else None
                 )
-                tracker.start()
-                try:
-                    completion = complete_text(prompt, log_file, self.args.llm_name)
-                finally:   
-                    tracker.stop()
 
-                try:
-                    entries = self.parse_entries(completion, self.valid_format_entires)
-                    assert entries["Action"].strip() in self.all_tool_names
-                    valid_response = True
-                except:
-                    print("Step", curr_step, file=sys.stderr)
-                    print(anthropic.AI_PROMPT + "\n" + completion + "\nObservation:\n", file=sys.stderr)
-                    print("Response is invalid and discarded", file=sys.stderr)
-                    prompt += "\n\n Your response was in incorrect format. Please provide a valid response with all entries: " + ", ".join(self.valid_format_entires) + "\n\n"
-                else:
-                    break
+                tracker.start()
+            elif use_cc and not HAVE_CODECARBON:
+                # If the user enabled CodeCarbon but it's not installed, we print a warning and continue without it.
+                print(
+                    "[CodeCarbon Warining] use_codecarbon=True but it is not installed."
+                    "Continue without CodeCarbon measurements.",
+                    file=sys.stderr
+                )
+            try:
+                for attempt in range(self.args.max_retries):
+                    try:
+                        completion = complete_text(prompt, log_file, self.args.llm_name)
+                        entries = self.parse_entries(completion, self.valid_format_entires)
+
+                        # Must exists an valid action
+                        assert "Action" in entries
+                        assert entries["Action"].strip() in self.all_tool_names
+                        valid_response = True
+                    except Exception:
+                        # Log for depuration
+                        print("Step", curr_step, file=sys.stderr)
+                        print(anthropic.AI_PROMPT + "\n" + completion + "\nObservation:\n", file=sys.stderr)
+                        print("Response is invalid and discarded", file=sys.stderr)
+
+                        # Tool List of tools allowed to be reminded to the LLM
+                        tool_list = "\n".join(f"- {name}" for name in sorted(self.all_tool_names))
+
+                        # Strengthen the prompt instructions for the LLM to avoid invalid responses in the next retry
+                        prompt += (
+                            "\n\n"
+                            + INVALID_RESPONSE_INSTRUCTIONS
+                            + "\n\nAllowed tools are:\n"
+                            + tool_list
+                            + "\n\nRemember: you MUST include ALL of these sections, in this order:\n"
+                            + "\n".join(f"{name}:" for name in self.valid_format_entires)
+                            + "\n"
+                        )
+                    else:
+                        # Valid response → exit retry loop
+                        break
+            finally:
+                
+                if tracker is not None and HAVE_CODECARBON:
+                    try:
+                        tracker.stop()
+                    except Exception as e:
+                        print(f"[CodeCarbon warning] Error stopping tracker: {e}", file=sys.stderr)
+                        
+
             if not valid_response:
                 return "No valid response after max_retries"
 
@@ -151,13 +246,15 @@ class ResearchAgent(Agent):
             #     postprocess LLM output and parse to env actions  #
             ########################################################
 
-            rg = entries["Research Plan and Status"]
+            rg = entries.get("Research Plan and Status", None)
             action = entries["Action"].strip()
             raw_action_input = entries["Action Input"]
 
-            new_research_plan_content = rg.strip("```") + "\n\n" 
-            entries["Research Plan and Status"] = new_research_plan_content
-            entries["Research Plan and Status"]= new_research_plan_content.replace("**", "")
+            if rg is not None:
+                # Clean the content of the research plan, remove markdown formatting and add newlines for better readability
+                new_research_plan_content = rg.strip("```") + "\n\n"
+                new_research_plan_content = new_research_plan_content.replace("**", "")
+                entries["Research Plan and Status"] = new_research_plan_content
 
             
             # parse the action input if we can ; other wise just return the original input and wait env to throw back an error
@@ -244,7 +341,7 @@ class ResearchAgent(Agent):
     def summarize_observation(self, action, observation, log_file, bs = 10000):
         """ Summarize the observation if it is too long with a sliding window of size bs """
 
-        bs = 10000
+        bs = 10000 #10000 6000
         blocks = [observation[i:i+bs] for i in range(0, len(observation), bs)]
         descriptions = []
         for idx, b in enumerate(blocks):

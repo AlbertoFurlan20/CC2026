@@ -1,0 +1,482 @@
+{
+    "user1_imdb_qwen/user_3/env_log/trace.json": {
+        "path": "user1_imdb_qwen/user_3/env_log/trace.json",
+        "summary": "",
+        "rubric_questions": {},
+        "score": [],
+        "score_steps": [],
+        "submitted_final_answer": false,
+        "final_score": -1,
+        "total_time": 1554.9891936779022,
+        "error": "",
+        "extra": {
+            "oom_error": true,
+            "connection_error": false,
+            "error": false,
+            "json_error": false,
+            "long_prompt_error": false,
+            "codecarbon": {
+                "totals": {
+                    "duration_s": 1010.4620424653403,
+                    "emissions_kg": 0.02319593825386349,
+                    "cpu_energy_kwh": 0.006124073249689536,
+                    "gpu_energy_kwh": 0.052909404271938534,
+                    "ram_energy_kwh": 0.011104640917240928,
+                    "energy_kwh": 0.07013811843887233
+                },
+                "per_step": [
+                    {
+                        "step": 0,
+                        "duration_s": 3.741299506276846,
+                        "emissions_kg": 9.331559636418156e-05,
+                        "cpu_energy_kwh": 2.3170424527275523e-05,
+                        "gpu_energy_kwh": 0.0002157879504096,
+                        "ram_energy_kwh": 4.320224639054181e-05,
+                        "energy_kwh": 0.0002821606213274
+                    },
+                    {
+                        "step": 1,
+                        "duration_s": 18.1120350160636,
+                        "emissions_kg": 0.000487766629245,
+                        "cpu_energy_kwh": 0.00010845237557553463,
+                        "gpu_energy_kwh": 0.0011622062075388,
+                        "ram_energy_kwh": 0.00020421314822474394,
+                        "energy_kwh": 0.0014748717313392001
+                    },
+                    {
+                        "step": 2,
+                        "duration_s": 11.141205188352615,
+                        "emissions_kg": 0.00031079179897756823,
+                        "cpu_energy_kwh": 6.611984203922765e-05,
+                        "gpu_energy_kwh": 0.0007358286442098,
+                        "ram_energy_kwh": 0.00013780017870918126,
+                        "energy_kwh": 0.0009397486649582
+                    },
+                    {
+                        "step": 3,
+                        "duration_s": 18.15000145183876,
+                        "emissions_kg": 0.000501531951382,
+                        "cpu_energy_kwh": 0.00010098188643607042,
+                        "gpu_energy_kwh": 0.0012100273569046,
+                        "ram_energy_kwh": 0.00020548502483351994,
+                        "energy_kwh": 0.0015164942681742
+                    },
+                    {
+                        "step": 4,
+                        "duration_s": 20.459425339009613,
+                        "emissions_kg": 0.00043106155841368123,
+                        "cpu_energy_kwh": 0.0001131123963249849,
+                        "gpu_energy_kwh": 0.0009790763388152,
+                        "ram_energy_kwh": 0.00021122250468848984,
+                        "energy_kwh": 0.0013034112398288
+                    },
+                    {
+                        "step": 5,
+                        "duration_s": 21.5334812249057,
+                        "emissions_kg": 0.00047228696614089996,
+                        "cpu_energy_kwh": 0.00012005145548541559,
+                        "gpu_energy_kwh": 0.001085691979668,
+                        "ram_energy_kwh": 0.00022232206518522842,
+                        "energy_kwh": 0.0014280655003387
+                    },
+                    {
+                        "step": 6,
+                        "duration_s": 20.53152083279565,
+                        "emissions_kg": 0.0003835211541569,
+                        "cpu_energy_kwh": 0.00011454390028414269,
+                        "gpu_energy_kwh": 0.000832931499687,
+                        "ram_energy_kwh": 0.00021218677190028675,
+                        "energy_kwh": 0.0011596621718714
+                    },
+                    {
+                        "step": 7,
+                        "duration_s": 22.108104600571096,
+                        "emissions_kg": 0.00048449940853800003,
+                        "cpu_energy_kwh": 0.00012401379371570302,
+                        "gpu_energy_kwh": 0.0010981603229679,
+                        "ram_energy_kwh": 0.00024281844053443267,
+                        "energy_kwh": 0.0014649925572181
+                    },
+                    {
+                        "step": 8,
+                        "duration_s": 22.0702763563022,
+                        "emissions_kg": 0.00046975858530489995,
+                        "cpu_energy_kwh": 0.00012927395056312431,
+                        "gpu_energy_kwh": 0.0010491133392988,
+                        "ram_energy_kwh": 0.00024203308430859966,
+                        "energy_kwh": 0.0014204203741705
+                    },
+                    {
+                        "step": 9,
+                        "duration_s": 22.137503853067756,
+                        "emissions_kg": 0.00046540458968440004,
+                        "cpu_energy_kwh": 0.00013191289902430293,
+                        "gpu_energy_kwh": 0.0010317077698118,
+                        "ram_energy_kwh": 0.0002436344236730367,
+                        "energy_kwh": 0.0014072550925092
+                    },
+                    {
+                        "step": 10,
+                        "duration_s": 22.96358611388132,
+                        "emissions_kg": 0.0006695237518486,
+                        "cpu_energy_kwh": 0.00012725481841616322,
+                        "gpu_energy_kwh": 0.0016478990960919,
+                        "ram_energy_kwh": 0.0002493012159919825,
+                        "energy_kwh": 0.0020244551305001
+                    },
+                    {
+                        "step": 11,
+                        "duration_s": 20.104713121894747,
+                        "emissions_kg": 0.00037086189528430004,
+                        "cpu_energy_kwh": 0.00011214035820407753,
+                        "gpu_energy_kwh": 0.000785647017409,
+                        "ram_energy_kwh": 0.00022359668961587778,
+                        "energy_kwh": 0.0011213840652289
+                    },
+                    {
+                        "step": 12,
+                        "duration_s": 21.741340348497033,
+                        "emissions_kg": 0.0005944043988972,
+                        "cpu_energy_kwh": 0.00012061910744469425,
+                        "gpu_energy_kwh": 0.0014412378196623,
+                        "ram_energy_kwh": 0.00023545800252273248,
+                        "energy_kwh": 0.0017973149296298
+                    },
+                    {
+                        "step": 13,
+                        "duration_s": 23.50291380798444,
+                        "emissions_kg": 0.0005447082706915,
+                        "cpu_energy_kwh": 0.0002923518128233437,
+                        "gpu_energy_kwh": 0.0010945839312269,
+                        "ram_energy_kwh": 0.00026011180307887905,
+                        "energy_kwh": 0.0016470475471294
+                    },
+                    {
+                        "step": 14,
+                        "duration_s": 22.85453045135364,
+                        "emissions_kg": 0.0005640141762956,
+                        "cpu_energy_kwh": 0.0001256439513240196,
+                        "gpu_energy_kwh": 0.0013323588436477,
+                        "ram_energy_kwh": 0.00024742048496973694,
+                        "energy_kwh": 0.0017054232799413999
+                    },
+                    {
+                        "step": 15,
+                        "duration_s": 13.041950643528253,
+                        "emissions_kg": 0.0002782240931727,
+                        "cpu_energy_kwh": 0.00012563090801083856,
+                        "gpu_energy_kwh": 0.0005606646151932,
+                        "ram_energy_kwh": 0.00015497738354089153,
+                        "energy_kwh": 0.0008412729067449
+                    },
+                    {
+                        "step": 16,
+                        "duration_s": 24.75158495269716,
+                        "emissions_kg": 0.0007149370209206,
+                        "cpu_energy_kwh": 0.00014448558119463178,
+                        "gpu_energy_kwh": 0.0017332147199125999,
+                        "ram_energy_kwh": 0.0002840720273437087,
+                        "energy_kwh": 0.0021617723284511
+                    },
+                    {
+                        "step": 17,
+                        "duration_s": 21.895516466815025,
+                        "emissions_kg": 0.0004362521808212,
+                        "cpu_energy_kwh": 0.00022564999304338547,
+                        "gpu_energy_kwh": 0.0008547701282636,
+                        "ram_energy_kwh": 0.00023868612879498666,
+                        "energy_kwh": 0.0013191062501019999
+                    },
+                    {
+                        "step": 18,
+                        "duration_s": 22.783902702853084,
+                        "emissions_kg": 0.000576846915404,
+                        "cpu_energy_kwh": 0.00013186236200090105,
+                        "gpu_energy_kwh": 0.0013658805371433,
+                        "ram_energy_kwh": 0.0002464830438165969,
+                        "energy_kwh": 0.0017442259429610002
+                    },
+                    {
+                        "step": 19,
+                        "duration_s": 20.694866872392595,
+                        "emissions_kg": 0.00041097254898789996,
+                        "cpu_energy_kwh": 0.0001166444778995217,
+                        "gpu_energy_kwh": 0.0009104460061378,
+                        "ram_energy_kwh": 0.00021557713305029024,
+                        "energy_kwh": 0.0012426676170877
+                    },
+                    {
+                        "step": 20,
+                        "duration_s": 23.580839020200074,
+                        "emissions_kg": 0.0006306686389763,
+                        "cpu_energy_kwh": 0.00013517520546126884,
+                        "gpu_energy_kwh": 0.0015199092714723,
+                        "ram_energy_kwh": 0.0002518835108274208,
+                        "energy_kwh": 0.001906967987761
+                    },
+                    {
+                        "step": 21,
+                        "duration_s": 22.731957011390477,
+                        "emissions_kg": 0.0004773349560961,
+                        "cpu_energy_kwh": 0.00013131710904144353,
+                        "gpu_energy_kwh": 0.0010666450199820002,
+                        "ram_energy_kwh": 0.0002453671003989222,
+                        "energy_kwh": 0.0014433292294224
+                    },
+                    {
+                        "step": 22,
+                        "duration_s": 24.04080381197855,
+                        "emissions_kg": 0.0007143865582069,
+                        "cpu_energy_kwh": 0.0001311188724170835,
+                        "gpu_energy_kwh": 0.0017680611366656,
+                        "ram_energy_kwh": 0.00026092787197292506,
+                        "energy_kwh": 0.0021601078810557003
+                    },
+                    {
+                        "step": 23,
+                        "duration_s": 22.483862773049623,
+                        "emissions_kg": 0.0005122656337523,
+                        "cpu_energy_kwh": 0.00012445800243961964,
+                        "gpu_energy_kwh": 0.0011643139870116,
+                        "ram_energy_kwh": 0.0002601779732128171,
+                        "energy_kwh": 0.0015489499626641
+                    },
+                    {
+                        "step": 24,
+                        "duration_s": 21.954334828536958,
+                        "emissions_kg": 0.00043599524803220003,
+                        "cpu_energy_kwh": 0.00013006533490220098,
+                        "gpu_energy_kwh": 0.0009482835363953,
+                        "ram_energy_kwh": 0.0002399804849280772,
+                        "energy_kwh": 0.0013183293562256
+                    },
+                    {
+                        "step": 25,
+                        "duration_s": 23.014472620096058,
+                        "emissions_kg": 0.0006806710552679001,
+                        "cpu_energy_kwh": 0.00012507800004005093,
+                        "gpu_energy_kwh": 0.0016823013458448,
+                        "ram_energy_kwh": 0.0002507821550553552,
+                        "energy_kwh": 0.0020581615009402
+                    },
+                    {
+                        "step": 26,
+                        "duration_s": 21.927703596185893,
+                        "emissions_kg": 0.0005112892627248,
+                        "cpu_energy_kwh": 0.00012197334246650588,
+                        "gpu_energy_kwh": 0.0011844290030963,
+                        "ram_energy_kwh": 0.00023959534045611127,
+                        "energy_kwh": 0.0015459976860191
+                    },
+                    {
+                        "step": 27,
+                        "duration_s": 23.170133979059756,
+                        "emissions_kg": 0.0004566899181493,
+                        "cpu_energy_kwh": 0.0001382639115066782,
+                        "gpu_energy_kwh": 0.0009887232909803001,
+                        "ram_energy_kwh": 0.00025391712733275837,
+                        "energy_kwh": 0.0013809043298199
+                    },
+                    {
+                        "step": 28,
+                        "duration_s": 23.748469923157245,
+                        "emissions_kg": 0.0006948402144595,
+                        "cpu_energy_kwh": 0.00013528218465366014,
+                        "gpu_energy_kwh": 0.0017106958130027,
+                        "ram_energy_kwh": 0.0002550271319690542,
+                        "energy_kwh": 0.0021010051296257
+                    },
+                    {
+                        "step": 29,
+                        "duration_s": 22.895718522835523,
+                        "emissions_kg": 0.0005915423023987001,
+                        "cpu_energy_kwh": 0.00013385710319042696,
+                        "gpu_energy_kwh": 0.0014061055693232,
+                        "ram_energy_kwh": 0.00024869806684364216,
+                        "energy_kwh": 0.0017886607393574
+                    },
+                    {
+                        "step": 30,
+                        "duration_s": 23.43146158196032,
+                        "emissions_kg": 0.0005536035263996001,
+                        "cpu_energy_kwh": 0.0001437779605573364,
+                        "gpu_energy_kwh": 0.0012718624063763999,
+                        "ram_energy_kwh": 0.0002583039796082672,
+                        "energy_kwh": 0.0016739443465420998
+                    },
+                    {
+                        "step": 31,
+                        "duration_s": 21.8176368935965,
+                        "emissions_kg": 0.0004297692510547,
+                        "cpu_energy_kwh": 0.00012072624342738262,
+                        "gpu_energy_kwh": 0.0009421065870185,
+                        "ram_energy_kwh": 0.00023667082842565376,
+                        "energy_kwh": 0.0012995036588716
+                    },
+                    {
+                        "step": 32,
+                        "duration_s": 21.584693343378603,
+                        "emissions_kg": 0.0005471730367307,
+                        "cpu_energy_kwh": 0.00011930983300508318,
+                        "gpu_energy_kwh": 0.0012833090822041,
+                        "ram_energy_kwh": 0.00025188140449134994,
+                        "energy_kwh": 0.0016545003197006001
+                    },
+                    {
+                        "step": 33,
+                        "duration_s": 22.114226734265685,
+                        "emissions_kg": 0.00048615627659779996,
+                        "cpu_energy_kwh": 0.0001304643844529991,
+                        "gpu_energy_kwh": 0.0010965725439219,
+                        "ram_energy_kwh": 0.00024296554079167028,
+                        "energy_kwh": 0.0014700024691667
+                    },
+                    {
+                        "step": 34,
+                        "duration_s": 22.33789789536968,
+                        "emissions_kg": 0.0005788452991677,
+                        "cpu_energy_kwh": 0.00013789477524170262,
+                        "gpu_energy_kwh": 0.001355569695569,
+                        "ram_energy_kwh": 0.000256804033376542,
+                        "energy_kwh": 0.0017502685041874
+                    },
+                    {
+                        "step": 35,
+                        "duration_s": 22.877663109451532,
+                        "emissions_kg": 0.0005726423906105,
+                        "cpu_energy_kwh": 0.0001433999804711642,
+                        "gpu_energy_kwh": 0.0013399896831031,
+                        "ram_energy_kwh": 0.00024812295627257597,
+                        "energy_kwh": 0.0017315126198469998
+                    },
+                    {
+                        "step": 36,
+                        "duration_s": 22.802932266145945,
+                        "emissions_kg": 0.0004451936103454,
+                        "cpu_energy_kwh": 0.00013187470758988838,
+                        "gpu_energy_kwh": 0.0009777349488544,
+                        "ram_energy_kwh": 0.00023653300995289035,
+                        "energy_kwh": 0.0013461426663971
+                    },
+                    {
+                        "step": 37,
+                        "duration_s": 8.606011615134776,
+                        "emissions_kg": 0.00022029398396759015,
+                        "cpu_energy_kwh": 4.83286102072707e-05,
+                        "gpu_energy_kwh": 0.0005289418120497483,
+                        "ram_energy_kwh": 8.883781487432618e-05,
+                        "energy_kwh": 0.0006661082371313148
+                    },
+                    {
+                        "step": 38,
+                        "duration_s": 22.581389563158154,
+                        "emissions_kg": 0.0006160723329911,
+                        "cpu_energy_kwh": 0.00012952484544485624,
+                        "gpu_energy_kwh": 0.0015007984228602,
+                        "ram_energy_kwh": 0.00023250951669950357,
+                        "energy_kwh": 0.0018628327850046
+                    },
+                    {
+                        "step": 39,
+                        "duration_s": 20.816690707579255,
+                        "emissions_kg": 0.00037189437451499996,
+                        "cpu_energy_kwh": 0.00012243456836301406,
+                        "gpu_energy_kwh": 0.0007546750481849,
+                        "ram_energy_kwh": 0.000247396381054389,
+                        "energy_kwh": 0.0011245059976025
+                    },
+                    {
+                        "step": 40,
+                        "duration_s": 20.290424949955195,
+                        "emissions_kg": 0.0003552527516123,
+                        "cpu_energy_kwh": 0.00012290545291707928,
+                        "gpu_energy_kwh": 0.0007144211270783,
+                        "ram_energy_kwh": 0.000236859740713883,
+                        "energy_kwh": 0.0010741863207094
+                    },
+                    {
+                        "step": 41,
+                        "duration_s": 20.87920606322587,
+                        "emissions_kg": 0.0003642240173155,
+                        "cpu_energy_kwh": 0.00012290214712740795,
+                        "gpu_energy_kwh": 0.0007493447661488,
+                        "ram_energy_kwh": 0.0002290660401029196,
+                        "energy_kwh": 0.0011013129533791
+                    },
+                    {
+                        "step": 42,
+                        "duration_s": 21.0345564247109,
+                        "emissions_kg": 0.0003680409217403,
+                        "cpu_energy_kwh": 0.00012404638924318065,
+                        "gpu_energy_kwh": 0.0007569539389109,
+                        "ram_energy_kwh": 0.00023185389127262492,
+                        "energy_kwh": 0.0011128542194268
+                    },
+                    {
+                        "step": 43,
+                        "duration_s": 21.771028766408563,
+                        "emissions_kg": 0.000387168688292,
+                        "cpu_energy_kwh": 0.00012654442494267613,
+                        "gpu_energy_kwh": 0.0008077567573108999,
+                        "ram_energy_kwh": 0.00023639012663231163,
+                        "energy_kwh": 0.0011706913088859999
+                    },
+                    {
+                        "step": 44,
+                        "duration_s": 20.46969541395083,
+                        "emissions_kg": 0.00036827598498799996,
+                        "cpu_energy_kwh": 0.00011990363251198022,
+                        "gpu_energy_kwh": 0.0007530847691441,
+                        "ram_energy_kwh": 0.0002405765841869311,
+                        "energy_kwh": 0.0011135649858431
+                    },
+                    {
+                        "step": 45,
+                        "duration_s": 19.85056401696056,
+                        "emissions_kg": 0.0003435845402366,
+                        "cpu_energy_kwh": 0.00011601861529695134,
+                        "gpu_energy_kwh": 0.0007041386188575,
+                        "ram_energy_kwh": 0.00021874763415220887,
+                        "energy_kwh": 0.0010389048683066
+                    },
+                    {
+                        "step": 46,
+                        "duration_s": 21.41277603339404,
+                        "emissions_kg": 0.0003744578034846,
+                        "cpu_energy_kwh": 0.00011655749496922057,
+                        "gpu_energy_kwh": 0.0007962831370207,
+                        "ram_energy_kwh": 0.00021941646766818066,
+                        "energy_kwh": 0.0011322570996581001
+                    },
+                    {
+                        "step": 47,
+                        "duration_s": 7.341200885828584,
+                        "emissions_kg": 0.0001865496950928001,
+                        "cpu_energy_kwh": 4.947518284260546e-05,
+                        "gpu_energy_kwh": 0.00042107478130040313,
+                        "ram_energy_kwh": 9.3524852144118e-05,
+                        "energy_kwh": 0.0005640748162871154
+                    },
+                    {
+                        "step": 48,
+                        "duration_s": 6.824295887257904,
+                        "emissions_kg": 0.00016298153811136686,
+                        "cpu_energy_kwh": 3.904935139272001e-05,
+                        "gpu_energy_kwh": 0.000379948081743384,
+                        "ram_energy_kwh": 7.381377796021602e-05,
+                        "energy_kwh": 0.0004928112110963938
+                    },
+                    {
+                        "step": 49,
+                        "duration_s": 17.749635376036167,
+                        "emissions_kg": 0.0004973909520148,
+                        "cpu_energy_kwh": 9.842928922872039e-05,
+                        "gpu_energy_kwh": 0.0012081359665073999,
+                        "ram_energy_kwh": 0.00019740777268953765,
+                        "energy_kwh": 0.0015039730284257002
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -1,9 +1,9 @@
 # plot_codecarbon.py
-# Uso:
-#   python MLAgentBench/plot_codecarbon.py --exp-dir ./<carpeta_experimento>
+# Usage:
+#   python MLAgentBench/plot_codecarbon.py --exp-dir ./<Experiment_Folder> 
 #   python MLAgentBench/plot_codecarbon.py --compare ./exp1 ./exp2 --out-dir ./multi_plots
-# La carpeta debe contener env_log/ y los CSVs de CodeCarbon en:
-#   <exp>/codecarbon/  y/o  <exp>/env_log/codecarbon/
+# File must contains the env_log/ and the CodeCarbon CSVs in:
+#   <exp>/codecarbon/  and/or  <exp>/env_log/codecarbon/
 
 import argparse
 import json
@@ -17,7 +17,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-# ======================== Helpers (lectura e inferencia) ========================
+# ======================== Helpers ========================
 
 def _find_cc_csvs(exp_dir: Path):
     """
@@ -76,6 +76,83 @@ def _guess_task_from_cc_csv(exp_dir: Path) -> Optional[str]:
             pass
     return None
 
+def _guess_agent_from_cc_csv(exp_dir: Path) -> Optional[str]:
+    """
+    Tries to infer the agent/LLM by reading 'project_name' from any CodeCarbon CSV.
+    
+    Assuming formats like:
+        - "cifar10-ResearchAgent-llama-3.1-8B-Instruct"
+        - "task-Agent-Model-with-dashes"
+    From there we return the "Agent" part (the second part).
+    """
+    for p in _find_cc_csvs(exp_dir):
+        try:
+            df = pd.read_csv(p, nrows=1)
+        except Exception:
+            continue
+
+        if "project_name" not in df.columns:
+            continue
+
+        pn = str(df["project_name"].iloc[0] or "").strip()
+        if not pn:
+            continue
+
+        parts = pn.split("-")
+        # ej: ["cifar10", "ResearchAgent", "llama", "3.1", "8B", "Instruct"]
+        if len(parts) >= 3:
+            # modelo = everithing that comes after of the task and the agent
+            model = "-".join(parts[2:])
+            return model.strip()
+        elif len(parts) == 2:
+            # Simple case: "<something>-<model>"
+            return parts[1].strip()
+
+    return None
+
+def normalize_agent_name(name: str) -> str:
+    """
+    Normalizes agent/model names to canonical aliases for plotting.
+    for example:
+     - 'Llama 3.1 8B' for any variant of llama-3.1-8B
+     - 'GPT-4o' for any variant of gpt-4o
+     - 'ResearchAgent-Llama 3.1 8B' for any variant of ResearchAgent-llama-3.1-8B-Instruct
+     - 'qwen2.5-7b-isntruct' becomes 'Qwen2.5 7B'
+     - 'qwen2.5-14b' becomes 'Qwen2.5 14B'
+    """
+    if not isinstance(name, str):
+        return "Unknown"
+
+    raw = name.strip()
+    low = raw.lower()
+
+    # --- Llama 3.1 8B ---
+    if "llama" in low and "3.1" in low and "8b" in low:
+        return "Llama 3.1 8B"
+
+    # --- Qwen ---
+    if "qwen" in low:
+        # Qwen 2.5 7B ("qwen2.5-7b-instruct", "qwen-2.5-7B-Instruct", etc)
+        if "2.5" in low and "7b" in low:
+            return "Qwen2.5 7B"
+        
+        # Qwen 2.5 14B ("qwen2.5-14b", "qwen-2.5-14B", etc)
+        if "2.5" in low and "14b" in low:
+            return "Qwen2.5 14B"
+        
+        # try other qwen models or sizes
+        return "Qwen (other)"
+        
+    # --- In any case of using again GPT (using again openAI APIs) ---
+    if "gpt" in low and "4o" in low:
+        return "GPT-4o"
+    if "gpt" in low and "4" in low and "mini" in low:
+        return "GPT-4.1 mini"
+
+    # It coudl be adding any other APIs like Claude, etc.
+
+    # If there is no match any alias, return name as is
+    return raw
 
 def _guess_task_from_folder(exp_dir: Path) -> str:
     """
@@ -121,10 +198,15 @@ def infer_task_name(exp_dir: Path) -> str:
 
 def infer_agent_name(exp_dir: Path) -> str:
     """
-    tries to infer the agent/LLM name:
-    -first from trace.json (agent, agent_name, llm_name, fast_llm_name)
-    -if not, folder name heuristic.
+    tries to infer the agent/model name used in the experiment.
+      1) trace.json (agent, agent_name, llm_name, fast_llm_name)
+      2) CodeCarbon CSVs (project_name)
+      3) folder name heuristics
+      Then normalizes the name to a canonical alias. like 'Llama 3.1 8B', 'GPT-4o', etc.
     """
+    raw_agent = None
+
+    # 1) trace.json
     tj = exp_dir / "env_log" / "trace.json"
     if tj.exists():
         try:
@@ -132,24 +214,43 @@ def infer_agent_name(exp_dir: Path) -> str:
             for k in ["agent", "agent_name", "llm_name", "fast_llm_name"]:
                 v = tr.get(k)
                 if isinstance(v, str) and v.strip():
-                    return v.strip()
+                    raw_agent = v.strip()
+                    return normalize_agent_name(raw_agent)
             meta = tr.get("meta", {})
             if isinstance(meta, dict):
                 for k in ["agent", "agent_name", "llm_name", "fast_llm_name"]:
                     v = meta.get(k)
                     if isinstance(v, str) and v.strip():
-                        return v.strip()
+                        raw_agent = v.strip()
+                        return normalize_agent_name(raw_agent)
         except Exception:
             pass
 
-    # Fallback por nombre de carpeta
+    # 2) project_name de CodeCarbon → model (llama-3.1-8B-Instruct, etc.)
+    raw_agent = _guess_agent_from_cc_csv(exp_dir)
+    if isinstance(raw_agent, str) and raw_agent.strip():
+        return normalize_agent_name(raw_agent)
+
+    # 3) fallback file name (old runs / without CSV completely deleted)
     name = exp_dir.name.lower()
-    if "gpt4o" in name or "gpt-4o" in name or "gpt4" in name: return "GPT-4o" if "4o" in name else "GPT-4"
-    if "claude" in name:      return "Claude"
-    if "langchain" in name:   return "LangChainAgent"
-    if "autogpt" in name:     return "AutoGPT"
-    if "baseline" in name:    return "Baseline"
-    return "Unknown"
+    if "gpt4o" in name or "gpt-4o" in name or "gpt4" in name:
+        raw_agent = "GPT-4o" if "4o" in name else "GPT-4"
+        return normalize_agent_name(raw_agent)
+    if "claude" in name:
+        raw_agent = "Claude"
+        return normalize_agent_name(raw_agent)
+    if "langchain" in name:
+        raw_agent = "LangChainAgent"
+        return normalize_agent_name(raw_agent)
+    if "autogpt" in name:
+        raw_agent = "AutoGPT"
+        return normalize_agent_name(raw_agent)
+    if "baseline" in name:
+        raw_agent = "Baseline"
+        return normalize_agent_name(raw_agent)
+
+    
+    return normalize_agent_name("Unknown")
 
 
 def _pick(summed: pd.Series, candidates, default=0.0):
@@ -286,27 +387,50 @@ def load_codecarbon(exp_dir: Path):
 
 def build_step_labels(exp_dir: Path, per_source_step: pd.DataFrame) -> dict[int, str]:
     """
-    Labels each step with the highest-energy environment action (env_*).
-    If none, tries to use env_log/trace.json.
+    Assigns a label per step:
+      1) Uses the env action (env_*) with highest energy at that step.
+      2) Fills gaps with info from env_log/trace.json, adjusting offset 0/1.
+    Returns a dict {step: label}.
     """
-    labels = {}
-    env_pick = (
-        per_source_step[per_source_step["source"].str.startswith("env_")]
-        .sort_values(["step", "energy_kwh"], ascending=[True, False])
-        .groupby("step").first().reset_index()
-    )
-    for _, row in env_pick.iterrows():
-        labels[int(row["step"])] = _clean_action_name(row["source"])
+    labels: dict[int, str] = {}
 
+    # 1) Labels from environment acctions (env_...)
+    env_rows = per_source_step[per_source_step["source"].str.startswith("env_")]
+    if not env_rows.empty:
+        env_pick = (
+            env_rows.sort_values(["step", "energy_kwh"], ascending=[True, False])
+            .groupby("step")
+            .first()
+            .reset_index()
+        )
+        for _, row in env_pick.iterrows():
+            labels[int(row["step"])] = _clean_action_name(row["source"])
+
+    # 2) Labels from trace.json, inferring offset (0-based vs 1-based)
     trace_path = exp_dir / "env_log" / "trace.json"
     if trace_path.exists():
         try:
             tr = json.load(open(trace_path, "r"))
-            for i, st in enumerate(tr.get("steps", []), start=1):
-                labels.setdefault(i, _clean_action_name(st.get("tool") or st.get("action") or st))
+            trace_steps = tr.get("steps", [])
+            if trace_steps:
+                steps_in_cc = sorted(per_source_step["step"].unique().tolist())
+                has_zero = 0 in steps_in_cc
+
+                # if CodeCarbon has step 0, we assume it's 0-based -> offset=0
+                # if not, we assume 1-based -> offset=1
+                offset = 0 if has_zero else 1
+
+                for idx, st in enumerate(trace_steps):
+                    step_no = idx + offset
+                    labels.setdefault(
+                        int(step_no),
+                        _clean_action_name(st.get("tool") or st.get("action") or st),
+                    )
         except Exception:
             pass
+
     return labels
+
 
 
 # ================================ Plots (per-exp) ================================
@@ -315,8 +439,16 @@ def bars_by_step(per_step: pd.DataFrame, step2label: dict, outdir: Path, title: 
     
     """
     Bar plot of energy consumption by step, with breakdown CPU/GPU/RAM/Total.
-    For the agent LLM
+    For the agent LLM view (steps labeled by action taken).
     """
+
+    # Ajust for the steps that actually exist in the env / trace - just to visualize without any retries "action"
+    if step2label:
+        # last step that appears in the env / trace
+        max_env_step = max(int(s) for s in step2label.keys())
+        # reaming only steps <= last step in env / trace
+        per_step = per_step[per_step["step"] <= max_env_step].copy()
+        per_step = per_step.sort_values("step")
     
     x = np.arange(len(per_step))
     cpu = per_step["cpu_energy_kwh"].to_numpy()
@@ -415,7 +547,7 @@ def line_emissions(per_step: pd.DataFrame, outdir: Path):
     print(f"[OK] {out}")
 
 
-# ====================== Agregación multi-experimentos & plots ======================
+# ====================== Agregation multi-experiments & plots ======================
 
 def aggregate_experiments(exp_dirs):
     """
@@ -461,7 +593,7 @@ def aggregate_experiments(exp_dirs):
         return None
 
     df = pd.DataFrame(rows)
-    # Si hay múltiples runs del mismo (task, agent), agrega
+    
     df = df.groupby(["task", "agent"], as_index=False).sum(numeric_only=True)
     return df
 
@@ -534,7 +666,7 @@ def scatter_time_vs_emissions(df: pd.DataFrame, outdir: Path):
                         fontsize=8, xytext=(3, 3), textcoords="offset points", alpha=0.8)
 
     ax.set_title("Time vs Emissions")
-    ax.set_xlabel("Duration (s)"); ax.set_ylabel("Emissions (kg CO₂e)")
+    ax.set_xlabel("Total time (s)"); ax.set_ylabel("Emissions (kg CO₂e)")
     ax.grid(True, linestyle="--", alpha=0.3); ax.legend(title="Agent")
 
     outdir.mkdir(parents=True, exist_ok=True)
@@ -573,21 +705,21 @@ def main():
         outdir = exp_dir / "codecarbon_plots"
         outdir.mkdir(parents=True, exist_ok=True)
 
-        # CSVs agregados útiles
+        # CSVs usefull
         per_step.to_csv(outdir / "per_step.csv", index=False)
         per_source_step.to_csv(outdir / "per_source_step.csv", index=False)
 
-        # Etiquetas por step (acciones del env)
+        # Labels por step (Actions del env)
         step2label = build_step_labels(exp_dir, per_source_step)
 
-        # Gráficas per-exp
+        # PLots per-exp
         bars_by_step(per_step, step2label, outdir, title=f"Energy by Step: {exp_dir.name}")
         bars_by_action(per_source_step, outdir, title=f"Energy Consumption by Tool: {exp_dir.name}")
         lines_energy_by_source(per_source_step, outdir)
         line_duration(per_step, outdir)
         line_emissions(per_step, outdir)
 
-        print(f"✅ Listo per-exp. Revisa {outdir}")
+        print(f"✅ Ready per-exp. Check {outdir}")
 
     # --- Multi-experiments ---
     if args.compare:
@@ -604,7 +736,7 @@ def main():
         stacked_hw_by_task_agent(df_multi, outdir_multi)
         scatter_time_vs_emissions(df_multi, outdir_multi)
 
-        print(f"✅ Listo multi-exp. Revisa {outdir_multi}")
+        print(f"✅ Ready multi-exp. Check {outdir_multi}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,142 @@
+import pandas as pd
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import numpy as np
+import random
+import torch
+from sklearn.model_selection import train_test_split
+from torch.utils.data import Dataset, DataLoader
+import torch.nn as nn
+import torch.optim as optim
+from torch.nn.utils.rnn import pad_sequence
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+DIMENSIONS = ["cohesion", "syntax", "vocabulary", "phraseology", "grammar", "conventions"]
+SEED = 42
+
+random.seed(SEED)
+torch.manual_seed(SEED)
+np.random.seed(SEED)
+
+
+class LanguageModelDataset(Dataset):
+    def __init__(self, X, y, tokenizer, max_len):
+        self.X = X
+        self.y = y
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        text = self.X[idx]
+        label = self.y[idx]
+
+        encoding = self.tokenizer.encode_plus(
+            text,
+            max_length=self.max_len,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt',
+        )
+
+        return {
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
+            'labels': torch.tensor(label, dtype=torch.float)
+        }
+
+
+def compute_metrics_for_regression(y_test, y_test_pred):
+    metrics = {}
+    for task in DIMENSIONS:
+        targets_task = [t[DIMENSIONS.index(task)] for t in y_test]
+        pred_task = [l[DIMENSIONS.index(task)] for l in y_test_pred]
+        
+        rmse = mean_squared_error(targets_task, pred_task, squared=False)
+
+        metrics[f"rmse_{task}"] = rmse
+    
+    return metrics
+
+class LanguageModel(nn.Module):
+    def __init__(self, model_name):
+        super(LanguageModel, self).__init__()
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        self.dropout = nn.Dropout(0.1)
+        self.fc = nn.Linear(self.model.config.hidden_size, 1)
+
+    def forward(self, input_ids, attention_mask):
+        outputs = self.model(input_ids, attention_mask=attention_mask)
+        pooled_output = outputs.pooler_output
+        pooled_output = self.dropout(pooled_output)
+        outputs = self.fc(pooled_output)
+        return outputs
+
+
+def train_model(X_train, y_train, X_valid, y_valid, tokenizer, max_len):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = LanguageModel('t5-base')
+    model.to(device)
+
+    dataset_train = LanguageModelDataset(X_train, y_train, tokenizer, max_len)
+    dataset_valid = LanguageModelDataset(X_valid, y_valid, tokenizer, max_len)
+
+    batch_size = 16
+    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+    valid_loader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
+
+    criterion = nn.L1Loss()
+    optimizer = optim.AdamW(model.parameters(), lr=1e-5)
+
+    for epoch in range(5):
+        model.train()
+        total_loss = 0
+        for batch in train_loader:
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
+
+            optimizer.zero_grad()
+
+            outputs = model(input_ids, attention_mask)
+            loss = criterion(outputs, labels.unsqueeze(1))
+
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+        print(f'Epoch {epoch+1}, Loss: {total_loss / len(train_loader)}')
+
+        model.eval()
+        total_loss = 0
+        with torch.no_grad():
+            for batch in valid_loader:
+                input_ids = batch['input_ids'].to(device)
+                attention_mask = batch['attention_mask'].to(device)
+                labels = batch['labels'].to(device)
+
+                outputs = model(input_ids, attention_mask)
+                loss = criterion(outputs, labels.unsqueeze(1))
+
+                total_loss += loss.item()
+        print(f'Epoch {epoch+1}, Val Loss: {total_loss / len(valid_loader)}')
+
+    return model
+
+
+def predict(model, X, tokenizer, max_len):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
+
+    dataset = LanguageModelDataset(X, None, tokenizer, max_len)
+    batch_size = 16
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+
+    model.eval()
+    predictions = []
+    with torch.no_grad():
+        for batch in loader:
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].

@@ -8,14 +8,23 @@ from MLAgentBench import LLM
 from MLAgentBench.environment import Environment
 from MLAgentBench.agents.agent import Agent, SimpleActionAgent, ReasoningActionAgent
 from MLAgentBench.agents.agent_research import ResearchAgent
-from MLAgentBench.agents.agent_langchain  import LangChainAgent
+# from MLAgentBench.agents.agent_langchain  import LangChainAgent
 try:
     from MLAgentBench.agents.agent_autogpt  import AutoGPTAgent
 except:
     print("Failed to import AutoGPTAgent; Make sure you have installed the autogpt dependencies if you want to use it.")
-
+try:
+    from MLAgentBench.agents.agent_langchain import LangChainAgent
+except Exception:
+    LangChainAgent = None
 
 def run(agent_cls, args):
+    
+    if args.agent_type == "LangChainAgent" and LangChainAgent is None:
+        raise RuntimeError(
+            "LangChainAgent no está disponible porque las dependencias de langchain/langchain_core fallan. "
+            "Usa ResearchAgent o instala una combinación compatible de LangChain."
+        )
     with Environment(args) as env:
 
         print("=====================================")
@@ -54,7 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--llm-name", type=str, default="claude-v1", help="llm name")
     parser.add_argument("--fast-llm-name", type=str, default="claude-v1", help="llm name")
     parser.add_argument("--edit-script-llm-name", type=str, default="claude-v1", help="llm name")
-    parser.add_argument("--edit-script-llm-max-tokens", type=int, default=4000, help="llm max tokens")
+    parser.add_argument("--edit-script-llm-max-tokens", type=int, default=1024, help="llm max tokens") #default=4000
     parser.add_argument("--agent-max-steps", type=int, default=50, help="max iterations for agent")
 
     # research agent configs
@@ -68,6 +77,12 @@ if __name__ == "__main__":
 
     # langchain configs
     parser.add_argument("--langchain-agent", type=str, default="zero-shot-react-description", help="langchain agent")
+    
+    # Codecarbon configs
+    # Codecarbon is an optional dependency, so we use a flag to enable it in case the user has it installed. 
+    # If the user enables it but it's not installed, we'll print a warning and continue without it.
+    parser.add_argument("--use-codecarbon", action="store_true",help="Active measure with CodeCarbon if its installed(default is disabled).")
+
 
 
     args = parser.parse_args()

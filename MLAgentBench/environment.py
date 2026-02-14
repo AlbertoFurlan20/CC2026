@@ -21,7 +21,13 @@ from .high_level_actions import HIGH_LEVEL_ACTIONS
 from .schema import Step, Trace, EnvException, TooLongPromptError, LLMError, EnhancedJSONEncoder 
 from .LLM import complete_text_claude
 from .prepare_task import prepare_task, get_task_info
-from codecarbon import EmissionsTracker
+
+try:
+    from codecarbon import EmissionsTracker
+    HAVE_CODECARBON = True
+except ImportError:
+    HAVE_CODECARBON = False
+
 
 class TimeoutException(Exception): pass
 
@@ -48,8 +54,20 @@ class Environment:
         self._args = args
         self._log_dir = os.path.join(args.log_dir, "env_log")
         self._setup_log_dir()
-        self._codecarbon_dir = os.path.join(self.log_dir, "codecarbon")
-        os.makedirs(self._codecarbon_dir, exist_ok=True)
+        
+        # CodeCarbon: folder only if the user asks for it and it is installed
+        self._codecarbon_dir = None
+        use_cc = getattr(args, "use_codecarbon", False)
+        
+        if use_cc and HAVE_CODECARBON:
+            self._codecarbon_dir = os.path.join(self.log_dir, "codecarbon")
+            os.makedirs(self._codecarbon_dir, exist_ok=True)
+        elif use_cc and not HAVE_CODECARBON:
+            print(
+                "[CodeCarbon Warning] use_codecarbon=true but it is not installed."
+                "The environment will run without CodeCarbon measurements.",
+                file=sys.stderr,
+            )
 
         if not args.interactive:
             self._benchmark_folder_name, self._research_problem = get_task_info(args.task)
@@ -352,30 +370,46 @@ class Environment:
 
         else:
             # Actions that want to be measure by Codecarbone (Ajdust as needed)
-            HEAVY_ACTIONS = {"Execute Script", "Python REPL", "List Files", "Inspect Script Lines", "Understand FIle", "Edit Script (AI)", "Edit Script Segments (AI)"}
+            HEAVY_ACTIONS = {"Execute Script", "Python REPL", "List Files", "Inspect Script Lines", "Understand File", "Edit Script (AI)", "Edit Script Segment (AI)"}
 
-            if action_name in HEAVY_ACTIONS:
+            use_cc = (getattr(self.args, "use_codecarbon", False) and HAVE_CODECARBON and self._codecarbon_dir is not None)
+            
+            if action_name in HEAVY_ACTIONS and use_cc:
                 out_file = f"step_{curr_step:04d}_{action_name.replace(' ', '_')}.csv"
                 gpu_ids = [self.args.device] if isinstance(self.args.device, int) else None
 
-                tracker = EmissionsTracker(
-                    project_name=f"{self.benchmark_folder_name}-{action_name}",
-                    output_dir=self._codecarbon_dir,
-                    output_file=out_file,
-                    measure_power_secs=1,   # 1–5 s recomendado
-                    save_to_file=True,
-                    log_level="error",
-                    gpu_ids=gpu_ids,
-                    #offline = true,  # descomentar si no hay conexión a internet
-                    #country_iso_code="ITA",  # ajustar según sea necesario
-                )
-                tracker.start()
+                tracker = None
+                try:
+                    from codecarbon import EmissionsTracker
+                    tracker = EmissionsTracker(
+                        project_name=f"{self.benchmark_folder_name}-{action_name}",
+                        output_dir=self._codecarbon_dir,
+                        output_file=out_file,
+                        measure_power_secs=1,   # 1–5 s recomendado
+                        save_to_file=True,
+                        log_level="error",
+                        gpu_ids=gpu_ids,
+                        #offline = true,  # descomentar si no hay conexión a internet
+                        #country_iso_code="ITA",  # ajustar según sea necesario
+                    )
+                    tracker.start()
+                except Exception as e:
+                    tracker = None
+                    print(
+                        f"[CodeCarbon Warning] the tracker could not be started for action {action_name}:{e}",
+                        file=sys.stderr,
+                    )
                 try:
                     observation = self._execute_action(action, curr_step, trace)
                 finally:
-                    tracker.stop()
+                    if tracker is not None:
+                        try:
+                            tracker.stop()
+                        except Exception as e:
+                            print(f"[CodeCarbon warning] Error stopping tracker: {e}", file=sys.stderr)
+                    
             else:
-                # Acciones ligeras: sin medición
+                # Acction without measurement
                 observation = self._execute_action(action, curr_step, trace)
 
         step_time = time.time()
@@ -384,8 +418,7 @@ class Environment:
 
         self.save(curr_step)
         return observation
-
-
+    
     def save(self, curr_step):
         """ Save the trace and snapshot of the workspace folder """     
         with open(os.path.join(self.log_dir, f"trace.json"), "w") as f:

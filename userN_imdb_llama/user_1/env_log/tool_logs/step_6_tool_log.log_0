@@ -1,0 +1,55 @@
+
+===================prompt=====================
+Given this (partial) file from line 1 character 0 to line 30 character 990: 
+    ``` 
+    from datasets import load_dataset
+import torch
+import pandas as pd
+
+if __name__ == "__main__":
+    
+    # IMPORTANT: Do NOT change this dataset name.
+    # The correct HF hub path is "stanfordnlp/imdb".
+    imdb = load_dataset("stanfordnlp/imdb")
+
+    #TODO: preprocess data
+
+    #TODO: define model here
+    model = None
+
+    #TODO: train model
+
+    #evaluate model and print accuracy on test set, also save the predictions of probabilities per class to submission.csv
+    submission = pd.DataFrame(columns=list(range(2)), index=range(len(imdb["test"])))
+    acc = 0
+    for idx, data in enumerate(imdb["test"]):
+        text = data["text"]
+        label = data["label"]
+        pred = model(text) # TODO: replace with proper prediction
+        pred = torch.softmax(pred, dim=0)
+        submission.loc[idx] = pred.tolist()
+        acc += int(torch.argmax(pred).item() == label)
+    print("Accuracy: ", acc/len(imdb["test"]))
+    
+    submission.to_csv('submission.csv', index_label='idx')
+    ```
+    Here is a detailed description on what to look for and what should returned: how the dataset is loaded and how the model is defined
+    The description should short and also reference crtical lines in the script relevant to what is being looked for. Only describe what is objectively confirmed by the file content. Do not include guessed numbers. If you cannot find the answer to certain parts of the request, you should say "In this segment, I cannot find ...".
+    
+===================llama-3.1-8B-Instruct response (128)=====================
+**Loading the Dataset**
+
+The dataset is loaded using the `load_dataset` function from the `datasets` library. The dataset name is specified as "stanfordnlp/imdb" (line 6). This loads the IMDB dataset from the Stanford NLP hub.
+
+**Defining the Model**
+
+The model is defined, but not properly initialized. The model is assigned to the `model` variable, but its type and architecture are not specified (line 14). The model is expected to be a PyTorch model, but its definition is left as a TODO comment.
+
+```python
+#TODO: define model here
+model
+===================tokens=====================
+Number of prompt tokens: 364
+Number of sampled tokens: 128
+
+

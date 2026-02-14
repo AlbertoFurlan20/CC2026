@@ -1,0 +1,64 @@
+
+===================prompt=====================
+Given this (partial) file from line 1 character 0 to line 27 character 882: 
+    ``` 
+    from datasets import load_dataset
+import torch
+import pandas as pd
+
+if __name__ == "__main__":
+    imdb = load_dataset("stanfordnlp/imdb")
+
+    #TODO: preprocess data
+
+    #TODO: define model here
+    model = None
+
+    #TODO: train model
+
+    #evaluate model and print accuracy on test set, also save the predictions of probabilities per class to submission.csv
+    submission = pd.DataFrame(columns=list(range(2)), index=range(len(imdb["test"])))
+    acc = 0
+    for idx, data in enumerate(imdb["test"]):
+        text = data["text"]
+        label = data["label"]
+        pred = model(text) # TODO: replace with proper prediction
+        pred = torch.softmax(pred, dim=0)
+        submission.loc[idx] = pred.tolist()
+        acc += int(torch.argmax(pred).item() == label)
+    print("Accuracy: ", acc/len(imdb["test"]))
+    
+    submission.to_csv('submission.csv', index_label='idx')
+    ```
+    Here is a detailed description on what to look for and what should returned: instructions on how to finetune DistilBERT on the IMDb dataset and save per class probabilities for test set examples to submission.csv
+    The description should short and also reference crtical lines in the script relevant to what is being looked for. Only describe what is objectively confirmed by the file content. Do not include guessed numbers. If you cannot find the answer to certain parts of the request, you should say "In this segment, I cannot find ...".
+    
+===================llama-3.1-8B-Instruct response (500)=====================
+**Finetuning DistilBERT on the IMDb dataset**
+
+To finetune DistilBERT on the IMDb dataset, follow these steps:
+
+1. **Install necessary libraries**: The script already imports the necessary libraries, including `torch` and `pandas`. However, to use DistilBERT, you need to install the `transformers` library. You can do this by running `pip install transformers` in your terminal.
+
+2. **Load the IMDb dataset**: The script loads the IMDb dataset using `load_dataset` from the `datasets` library. This is done in the line `imdb = load_dataset("stanfordnlp/imdb")`.
+
+3. **Preprocess the data**: The script currently has a TODO comment for preprocessing the data. You need to preprocess the text data by tokenizing it and converting it into a format that can be fed into the model. You can use the `preprocess` function from the `datasets` library to do this.
+
+4. **Define the model**: The script currently has a TODO comment for defining the model. You need to define a DistilBERT model and fine-tune it on the IMDb dataset. You can use the `DistilBertForSequenceClassification` class from the `transformers` library to do this.
+
+5. **Train the model**: The script currently has a TODO comment for training the model. You need to train the model on the training set of the IMDb dataset.
+
+6. **Make predictions on the test set**: The script makes predictions on the test set using the trained model. This is done in the line `pred = model(text)`. However, this line is currently commented out and needs to be replaced with the proper prediction method.
+
+7. **Save per-class probabilities to submission.csv**: The script saves the per-class probabilities to a submission.csv file. This is done in the lines `submission = pd.DataFrame(columns=list(range(2)), index=range(len(imdb["test"])))` and `submission.to_csv('submission.csv', index_label='idx')`.
+
+**Critical lines in the script:**
+
+* `imdb = load_dataset("stanfordnlp/imdb")`: Loads the IMDb dataset.
+* `submission = pd.DataFrame(columns=list(range(2)), index=range(len(imdb["test"])))`: Creates a DataFrame to store the per-class probabilities.
+* `submission.to_csv('submission.csv', index_label='idx')`: Saves the per-class probabilities to a
+===================tokens=====================
+Number of prompt tokens: 351
+Number of sampled tokens: 500
+
+

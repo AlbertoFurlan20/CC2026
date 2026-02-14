@@ -1,0 +1,55 @@
+
+===================prompt=====================
+Given this (partial) file from line 1 character 0 to line 30 character 990: 
+    ``` 
+    from datasets import load_dataset
+import torch
+import pandas as pd
+
+if __name__ == "__main__":
+    
+    # IMPORTANT: Do NOT change this dataset name.
+    # The correct HF hub path is "stanfordnlp/imdb".
+    imdb = load_dataset("stanfordnlp/imdb")
+
+    #TODO: preprocess data
+
+    #TODO: define model here
+    model = None
+
+    #TODO: train model
+
+    #evaluate model and print accuracy on test set, also save the predictions of probabilities per class to submission.csv
+    submission = pd.DataFrame(columns=list(range(2)), index=range(len(imdb["test"])))
+    acc = 0
+    for idx, data in enumerate(imdb["test"]):
+        text = data["text"]
+        label = data["label"]
+        pred = model(text) # TODO: replace with proper prediction
+        pred = torch.softmax(pred, dim=0)
+        submission.loc[idx] = pred.tolist()
+        acc += int(torch.argmax(pred).item() == label)
+    print("Accuracy: ", acc/len(imdb["test"]))
+    
+    submission.to_csv('submission.csv', index_label='idx')
+    ```
+    Here is a detailed description on what to look for and what should returned: preprocessing, model definition, training, evaluation, and prediction
+    The description should short and also reference crtical lines in the script relevant to what is being looked for. Only describe what is objectively confirmed by the file content. Do not include guessed numbers. If you cannot find the answer to certain parts of the request, you should say "In this segment, I cannot find ...".
+    
+===================llama-3.1-8B-Instruct response (128)=====================
+**Preprocessing**
+
+The script loads a dataset from the Hugging Face Hub using `load_dataset("stanfordnlp/imdb")`. However, it does not perform any preprocessing on the data. The dataset is loaded as is, without any cleaning, tokenization, or normalization.
+
+**Model Definition**
+
+The model is defined as `model = None`, indicating that no model has been defined yet. The model should be defined in this section, but the script does not provide any information about the model architecture or parameters.
+
+**Training**
+
+There is no training code in the script. The `#TODO: train model` comment suggests that training
+===================tokens=====================
+Number of prompt tokens: 364
+Number of sampled tokens: 128
+
+

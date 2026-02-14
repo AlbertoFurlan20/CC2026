@@ -1,0 +1,121 @@
+########################
+# 1) Cosas de Python
+########################
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+########################
+# 2) Entornos y cosas locales
+########################
+.venv/
+venv/
+env/
+.env/
+
+.ipynb_checkpoints/
+
+########################
+# 3) Logs, temporales, figuras
+########################
+*.log
+*.tmp
+*.out
+*.pdf
+*.png
+
+codecarbon_multi_plots/
+#mis_multi_plots*/
+plots_llama_qwen/
+#output_exel/
+data/
+
+########################
+# 4) SECRETOS (MUY IMPORTANTE)
+########################
+.kaggle/
+openai_api_key.txt
+
+########################
+# 5) Archivos pesados generados por los benchmarks
+#    (siguen estando en tu máquina si ya los bajaste,
+#     pero git no los sube al remoto)
+########################
+MLAgentBench/benchmarks/*/env/__pycache__/
+MLAgentBench/benchmarks/*/scripts/__pycache__/
+MLAgentBench/benchmarks/*/scripts/prepared
+
+MLAgentBench/benchmarks/*/env/*.csv
+MLAgentBench/benchmarks/*/env/*.csv.gz
+MLAgentBench/benchmarks/*/env/data/
+MLAgentBench/benchmarks/*/env/images/
+MLAgentBench/benchmarks/*/env/networks/
+# (Opcional) seguir ignorando datos pesados, pero no los .py
+MLAgentBench/benchmarks/*/env/*.csv
+MLAgentBench/benchmarks/*/env/*.zip
+MLAgentBench/benchmarks/*/env/*.gz
+MLAgentBench/benchmarks/*/env/*.npz
+MLAgentBench/benchmarks/*/env/images/
+
+
+########################
+# 6) Carpeta de resultados / runs (OPCIONAL)
+#    Si QUIERES versionar user1_*/userN_*, elimina o comenta
+#    las líneas de aquí abajo.
+########################
+baseline/
+baseline*/
+workspace/
+workspaceB/
+workspaceN/
+workspace_user_1/
+workspace_user_2/
+workspace_user_3/
+workspace_vllm/
+1workspace/
+1tryworkspace/
+1users_*/
+2_users_cifar10/
+users_cifar10/
+users_house/
+users_vector/
+
+# Carpetas de runs por usuario y modelo (de momento ignoradas;
+# puedes comentar estas líneas si quieres subirlas a git)
+#user1_*/
+#userN_*/
+
+##############################
+# Scratch / local only stuff #
+##############################
+
+# Pruebas antiguas
+1tryusers_cifar10/
+prueba/
+
+# Pruebas de vLLM que no van a la tesis
+cifar10_vllm2/
+feedback_vllm2/
+house_vllm2/
+imdb_vllm2/
+space_vllm2/
+vector_vllm2/
+
+# answer.csv locales de Kaggle (se regeneran con prepare.py)
+MLAgentBench/benchmarks/amp-parkinsons-disease-progression-prediction/scripts/answer.csv
+MLAgentBench/benchmarks/fathomnet/scripts/answer.csv
+MLAgentBench/benchmarks/feedback/scripts/answer.csv
+MLAgentBench/benchmarks/house-price/scripts/answer.csv
+MLAgentBench/benchmarks/spaceship-titanic/scripts/answer.csv
+
+###################################
+# Huge local datasets / large logs
+###################################
+
+# Log gigante de Parkinson (no subir a GitHub)
+user1_parkinson_qwen/user_2/env_log/trace.json
+
+# Dataset procesado ogbn_arxiv (se puede regenerar)
+networks/ogbn_arxiv/processed/geometric_data_processed.pt

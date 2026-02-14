@@ -1,0 +1,67 @@
+
+===================prompt=====================
+Given this (partial) file from line 1 character 0 to line 27 character 882: 
+    ``` 
+    from datasets import load_dataset
+import torch
+import pandas as pd
+
+if __name__ == "__main__":
+    imdb = load_dataset("stanfordnlp/imdb")
+
+    #TODO: preprocess data
+
+    #TODO: define model here
+    model = None
+
+    #TODO: train model
+
+    #evaluate model and print accuracy on test set, also save the predictions of probabilities per class to submission.csv
+    submission = pd.DataFrame(columns=list(range(2)), index=range(len(imdb["test"])))
+    acc = 0
+    for idx, data in enumerate(imdb["test"]):
+        text = data["text"]
+        label = data["label"]
+        pred = model(text) # TODO: replace with proper prediction
+        pred = torch.softmax(pred, dim=0)
+        submission.loc[idx] = pred.tolist()
+        acc += int(torch.argmax(pred).item() == label)
+    print("Accuracy: ", acc/len(imdb["test"]))
+    
+    submission.to_csv('submission.csv', index_label='idx')
+    ```
+    Here is a detailed description on what to look for and what should returned: preprocessing steps, model definition, training loop, prediction logic
+    The description should short and also reference crtical lines in the script relevant to what is being looked for. Only describe what is objectively confirmed by the file content. Do not include guessed numbers. If you cannot find the answer to certain parts of the request, you should say "In this segment, I cannot find ...".
+    
+===================llama-3.1-8B-Instruct response (500)=====================
+### Preprocessing Steps
+
+The script does not contain any explicit preprocessing steps for the data. However, the `load_dataset` function from the `datasets` library is used to load the IMDB dataset, which is a preprocessed dataset. Therefore, it can be assumed that the data is already preprocessed.
+
+### Model Definition
+
+The model is not defined in the script. The line `model = None` indicates that the model has not been initialized yet.
+
+### Training Loop
+
+There is no training loop in the script. The line `#TODO: train model` suggests that the training loop is supposed to be implemented, but it is not present in the current code.
+
+### Prediction Logic
+
+The prediction logic is implemented in the following lines:
+
+```python
+pred = model(text) # TODO: replace with proper prediction
+pred = torch.softmax(pred, dim=0)
+submission.loc[idx] = pred.tolist()
+acc += int(torch.argmax(pred).item() == label)
+```
+
+Here, `model(text)` is used to make a prediction on the input text `text`. The `torch.softmax` function is used to apply the softmax activation function to the output of the model. The predicted probabilities are then stored in the `submission` DataFrame. The accuracy is calculated by comparing the predicted label with the actual label.
+
+Note that the `model(text)` line is commented with `# TODO: replace with proper prediction`, indicating that this line needs to be replaced with the actual prediction logic.
+===================tokens=====================
+Number of prompt tokens: 336
+Number of sampled tokens: 298
+
+

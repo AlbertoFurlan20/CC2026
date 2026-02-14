@@ -1,0 +1,46 @@
+[Errno 2] No such file or directory: 'crfm_api_key.txt'
+Could not load CRFM API key crfm_api_key.txt.
+[Errno 2] No such file or directory: 'claude_api_key.txt'
+Could not load anthropic API key claude_api_key.txt.
+No module named 'vertexai'
+Could not load VertexAI API.
+Failed to import AutoGPTAgent; Make sure you have installed the autogpt dependencies if you want to use it.
+log_dir user1_ogbn/user_2/env_log already exists
+prepare.py not found or already prepared
+=====================================
+Benchmark folder name:  ogbn-arxiv
+Research problem:  Given a training script on a dataset train.py, improve upon the current model performance (trained with current hyperparmeters in train.py). The training epochs should be within 10 to save time.
+Lower level actions enabled:  ['List Files', 'Read File', 'Write File', 'Append File', 'Copy File', 'Undo Edit Script', 'Execute Script', 'Python REPL', 'Final Answer']
+High level actions enabled:  ['Understand File', 'Append Summary to Research Log', 'Inspect Script Lines', 'Edit Script (AI)', 'Edit Script Segment (AI)', 'Reflection', 'Retrieval from Research Log']
+=====================================
+Agent is up! See progress in user1_ogbn/user_2/agent_log/main_log
+STDERR: 
+ STDERR:   0%|                                                                                                                 | 0/90941 [00:00<?, ?it/s]
+ STDERR: Epoch 00:   0%|                                                                                                       | 0/90941 [00:00<?, ?it/s]Traceback (most recent call last):
+ STDERR:   File "/MLAgentBench/workspace/ogbn/user_2/ogbn-arxiv/train.py", line 119, in <module>
+ STDERR:     out = model(batch.x.to(device))
+ STDERR:   File "/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+ STDERR:     return forward_call(*args, **kwargs)
+ STDERR:   File "/MLAgentBench/workspace/ogbn/user_2/ogbn-arxiv/train.py", line 55, in forward
+ STDERR:     x = lin(x)
+ STDERR:   File "/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+ STDERR:     return forward_call(*args, **kwargs)
+ STDERR:   File "/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/torch/nn/modules/linear.py", line 114, in forward
+ STDOUT:  STDERR:     return F.linear(input, self.weight, self.bias)
+ STDERR: RuntimeError: CUDA error: CUBLAS_STATUS_NOT_INITIALIZED when calling `cublasCreate(handle)`
+ =====================================
+Final message:  Finished due to env.is_final() == True
+Active Children: 0
+Active Children: 0
+
+--- STDERR ---
+/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/pydantic/_internal/_config.py:383: UserWarning: Valid config keys have changed in V2:
+* 'schema_extra' has been renamed to 'json_schema_extra'
+  warnings.warn(message, UserWarning)
+/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/pydantic/_internal/_config.py:383: UserWarning: Valid config keys have changed in V2:
+* 'allow_population_by_field_name' has been renamed to 'validate_by_name'
+* 'schema_extra' has been renamed to 'json_schema_extra'
+  warnings.warn(message, UserWarning)
+Namespace(task='ogbn-arxiv', log_dir='user1_ogbn/user_2', work_dir='workspace/ogbn/user_2', max_steps=50, max_time=18000, device=0, python='/home/user/micromamba/envs/autogpt/bin/python', interactive=False, resume=None, resume_step=0, agent_type='ResearchAgent', llm_name='llama-3.1-8B-Instruct', fast_llm_name='llama-3.1-8B-Instruct', edit_script_llm_name='llama-3.1-8B-Instruct', edit_script_llm_max_tokens=1024, agent_max_steps=50, actions_remove_from_prompt=[], actions_add_to_prompt=[], retrieval=False, valid_format_entires=['Thought', 'Action', 'Action Input'], max_steps_in_context=1, max_observation_steps_in_context=1, max_retries=8, langchain_agent='zero-shot-react-description')
+Read only files:  ['networks/ogbn_arxiv/RELEASE_v1.txt', 'networks/ogbn_arxiv/mapping/nodeidx2paperid.csv.gz', 'networks/ogbn_arxiv/mapping/README.md', 'networks/ogbn_arxiv/mapping/labelidx2arxivcategeory.csv.gz', 'networks/ogbn_arxiv/split/time/test.csv.gz', 'networks/ogbn_arxiv/split/time/valid.csv.gz', 'networks/ogbn_arxiv/split/time/train.csv.gz', 'networks/ogbn_arxiv/processed/pre_transform.pt', 'networks/ogbn_arxiv/processed/pre_filter.pt', 'networks/ogbn_arxiv/processed/geometric_data_processed.pt', 'networks/ogbn_arxiv/raw/num-node-list.csv.gz', 'networks/ogbn_arxiv/raw/node-feat.csv.gz', 'networks/ogbn_arxiv/raw/num-edge-list.csv.gz', 'networks/ogbn_arxiv/raw/node_year.csv.gz', 'networks/ogbn_arxiv/raw/node-label.csv.gz', 'networks/ogbn_arxiv/raw/edge.csv.gz']
+[codecarbon WARNING @ 20:34:38] Multiple instances of codecarbon are allowed to run at the same time.
