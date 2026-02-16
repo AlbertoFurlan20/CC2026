@@ -15,11 +15,11 @@ tensorflow>=2.9.0
 tfds-nightly==4.5.2.dev202204190046
 toolz>=0.11.1
 
-# Paquete oficial de DeepMind para CLRS
-dm-clrs @ git+https://github.com/deepmind/clrs.git
+# Official DeepMind package for CLRS
+# Due to incompatibility issues, dm-clrs was removed
 
 ##############################
-# Imagen / visión
+# Image / vision
 ##############################
 pillow
 
@@ -54,6 +54,7 @@ peft
 accelerate
 evaluate
 
+
 ##############################
 # Grafos / GNN
 ##############################
@@ -62,14 +63,14 @@ ogb
 networkx
 
 ##############################
-# Utilidades varias
+# Utilities varias
 ##############################
 cchardet
 pytest
 dacite
 
 ##############################
-# Extras que has añadido tú
+# Extras added
 ##############################
 fastapi
 uvicorn
