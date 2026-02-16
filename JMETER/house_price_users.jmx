@@ -43,8 +43,8 @@
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{&#xd;
   &quot;task&quot;: &quot;house-price&quot;,&#xd;
-  &quot;log_dir&quot;: &quot;user1_house/user_${__intSum(${__threadNum},1)}&quot;,&#xd;
-  &quot;work_dir&quot;: &quot;workspace/house_price/user_${__intSum(${__threadNum},1)}&quot;,&#xd;
+  &quot;log_dir&quot;: &quot;user1_house_llama/user_${__threadNum}&quot;,&#xd;
+  &quot;work_dir&quot;: &quot;workspace/house_price_llama/user_${__threadNum}&quot;,&#xd;
   &quot;llm_name&quot;: &quot;llama-3.1-8B-Instruct&quot;,&#xd;
   &quot;device&quot;: 0,&#xd;
   &quot;agent_type&quot;: &quot;ResearchAgent&quot;,&#xd;
@@ -56,7 +56,8 @@
   ],&#xd;
   &quot;max_steps_in_context&quot;: 1,&#xd;
   &quot;max_observation_steps_in_context&quot;: 1,&#xd;
-  &quot;max_retries&quot;: 8&#xd;
+  &quot;max_retries&quot;: 8,&#xd;
+  &quot;use_codecarbon&quot;: ${__P(use_codecarbon,false)}&#xd;
 }&#xd;
 </stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
