@@ -2,7 +2,7 @@ This repository contains the framework developed for the Master’s Thesis: "Imp
 
 The project extends the MLAgentBench framework: (https://github.com/snap-stanford/MLAgentBench/) to enable autonomous agents in local environments, focusing on open-source models, energy sustainability, and performance optimization for smaller LLMs.
 
-## Key Features
+# Key Features
 Local Model Support: Seamless integration with Llama 3.1-8B and Qwen-2.5-7B using the vLLM inference engine.
 
 Green AI Monitoring: Integrated CodeCarbon to track real-time energy consumption (GPU, CPU, RAM) and CO2 emissions per agent action.
@@ -13,7 +13,7 @@ Variability Analysis: Stress testing using Apache JMeter to evaluate system stab
 
 Containerized Environment: A fully pre-configured Docker environment (~45GB) with all dependencies, Conda environments, and tools pre-installed.
 
-## Installation & Setup
+# Installation & Setup
 1. Prerequisites
 Docker installed on a machine with NVIDIA GPU support (nvidia-container-toolkit).
 
@@ -25,14 +25,14 @@ Hugging Face Token: For accessing gated models like Llama 3.1.
 git clone https://github.com/JDgr12/MLAgentBench.git
 cd MLAgentBench
 
-# Build and run
+## Build and run
 docker build -t mlagentbench-thesis .
 docker run --gpus all --user root -w /MLAgentBench \
   --name mlagentbench-thesis-ctr \
   -p 8001:8000 -p 8002:8002 \
   -v ${PWD}:/MLAgentBench -it mlagentbench-thesis
 
-## Quick Start Guide
+# Quick Start Guide
 Step 1: Start the Inference Server (vLLM)
 Open a new terminal inside the container and launch the model (e.g., Llama 3.1-8B):
 
@@ -44,14 +44,14 @@ python -m vllm.entrypoints.openai.api_server \
 Step 2: Run an Agent Task
 In another terminal (inside the container), prepare and run a benchmark task (e.g., cifar10):
 
-# 1. Prepare the task environment
+## 1. Prepare the task environment
 python -m MLAgentBench.prepare_task cifar10 $(which python)
 
-# 2. Run the agent
+## 2. Run the agent
 python -m MLAgentBench.runner \
   --task cifar10 --llm-name llama-3.1-8B-Instruct --device cuda
 
-## Research Highlights
+# Research Highlights
 
 Prompt Engineering: Moving from standard prompts to Rigid Prompts improved Qwen-2.5-7B's success rate from 19.4% to 55.6%.
 
