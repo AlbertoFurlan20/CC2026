@@ -3,7 +3,7 @@ This repository contains the framework developed for the Master’s Thesis: "Imp
 The project extends the MLAgentBench framework: (https://github.com/snap-stanford/MLAgentBench/) to enable autonomous agents in local environments, focusing on open-source models, energy sustainability, and performance optimization for smaller LLMs.
 
 # Recomendations
-By performing the clone of the repository, be aware that it already contains all the results obtain during the project analysis, saved on all folders named (user1_taskname_model, userN_taskname_model, mis_multi_plots, mis_multi_plotsN) following the nomenclature of the tests that were carried out by the original (normal prompt) with the names of "userN" while the other tests by the name of "user1" were made by using the edited (rigid prompt)
+By performing the clone of the repository, be aware that it already contains all the results obtained during the project analysis, saved on all folders named (user1_taskname_model, userN_taskname_model, mis_multi_plots, mis_multi_plotsN) following the nomenclature of the tests that were carried out by the original (normal prompt) with the names of "userN" while the other tests by the name of "user1" were made by using the edited (rigid prompt) ones, all this folders of the resutls are 10 GB in size.
 
 For a complete guide step by step please read the "Guide -MLAgentBench user manual.pdf" file
 
