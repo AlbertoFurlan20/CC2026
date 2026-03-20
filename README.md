@@ -69,3 +69,4 @@ Prompt Engineering: Moving from standard prompts to Rigid Prompts improved Qwen-
 Energy Footprint: Research showed that 89% of the total energy consumption is concentrated in "Edit Script" and "Execute Script" actions.
 
 Operational Efficiency: Local deployment offers a sustainable and private alternative to cloud-based LLM APIs for automated software engineering.
+"\n Test" 
