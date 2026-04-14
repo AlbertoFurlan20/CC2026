@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Ecosystem and Task Delegation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #333;
+            margin: 0 0 10px 0;
+        }
+        .header p {
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .mermaid-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 1100px;
+            width: 100%;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Agent Ecosystem & Task Delegation</h1>
+        <p>This network graph maps how the main agents interact with the environment, rely on local LLMs, and pass specific sub-tasks (like code editing or log summarizing) to specialized sub-agents.</p>
+    </div>
+
+    <div class="mermaid-container">
+        <div class="mermaid" style="padding-top: 20px; overflow: visible;">
+flowchart TD
+    User([User / Shell Script]) ==>|Starts ML Benchmark Task <br> e.g. 'cifar10'| Runner{runner.py}
+
+    subgraph "Agent Framework Architecture"
+        Runner -.->|Instantiates One Main Agent| GroupAgents
+        
+        subgraph GroupAgents ["Main Agent Selection"]
+            direction LR
+            ResAgent([Research Agent])
+            LangAgent([LangChain Agent])
+            AutoAgent([AutoGPT Agent])
+        end
+    end
+
+    subgraph "Specialized Sub-Agents / High-Level Tools"
+        direction LR
+        EditAI((Edit Script AI<br/>Code Rewriter))
+        SummAI((Summarization AI<br/>Log Compressor))
+    end
+
+    subgraph "Infrastructure"
+        Env[("Execution Environment<br/>(Docker + Workspace files)")]
+        LLM{"Local LLM Inference<br/>(vLLM API / Llama / Qwen)"}
+    end
+
+    %% Main interactions
+    GroupAgents =====>|Evaluates Context & Requests Action| LLM
+    LLM =====>|Returns JSON Tool command| GroupAgents
+
+    GroupAgents =====>|Sends Command: execute / write / edit| Env
+    Env =====>|Returns Observation / Terminal Logs| GroupAgents
+
+    %% Task Delegation to Sub agents
+    Env -.->|Delegates file edits| EditAI
+    Env -.->|Delegates large log truncation| SummAI
+
+    EditAI ====>|Queries Code Edit Prompt| LLM
+    LLM ====>|Returns pure python code| EditAI
+    EditAI -->|Overwrites File| Env
+
+    SummAI ====>|Queries Summary Prompt with chunk| LLM
+    LLM ====>|Returns condensed observation| SummAI
+    SummAI -->|Returns short string| Env
+
+    classDef mainAgent fill:#dfeafe,stroke:#4f46e5,stroke-width:2px;
+    classDef subAgent fill:#fce7f3,stroke:#db2777,stroke-width:2px;
+    classDef infra fill:#fef3c7,stroke:#be185d,stroke-width:2px;
+    classDef theSys fill:#f3f4f6,stroke:#4b5563,stroke-width:1px;
+
+    class ResAgent,LangAgent,AutoAgent mainAgent;
+    class EditAI,SummAI subAgent;
+    class LLM infra;
+    class Env infra;
+    class User,Runner theSys;
+
+        </div>
+        <p style="text-align: center; color: #888; font-size: 13px; margin-top: 25px;">
+            <em>Tip: Right-click the diagram above and select "Save image as..." to export it.</em>
+        </p>
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            flowchart: {
+                curve: 'basis',
+                nodeSpacing: 50,
+                rankSpacing: 60
+            }
+        });
+    </script>
+</body>
+</html>

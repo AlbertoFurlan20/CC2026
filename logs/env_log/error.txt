@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/MLAgentBench/MLAgentBench/agents/agent_research.py", line 204, in run
+    completion = complete_text(prompt, log_file, self.args.llm_name)
+  File "/MLAgentBench/MLAgentBench/LLM.py", line 452, in complete_text
+    completion = complete_text_openai(
+  File "/MLAgentBench/MLAgentBench/LLM.py", line 402, in complete_text_openai
+    response = openai.ChatCompletion.create(messages=messages, **raw_request)
+  File "/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/openai/api_resources/chat_completion.py", line 25, in create
+    return super().create(*args, **kwargs)
+  File "/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/openai/api_resources/abstract/engine_api_resource.py", line 153, in create
+    response, _, api_key = requestor.request(
+  File "/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/openai/api_requestor.py", line 226, in request
+    resp, got_stream = self._interpret_response(result, stream)
+  File "/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/openai/api_requestor.py", line 619, in _interpret_response
+    self._interpret_response_line(
+  File "/home/user/micromamba/envs/autogpt/lib/python3.10/site-packages/openai/api_requestor.py", line 682, in _interpret_response_line
+    raise self.handle_error_response(
+openai.error.InvalidRequestError: This model's maximum context length is 1024 tokens. However, your request has 1573 input tokens. Please reduce the length of the input messages. None
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/MLAgentBench/MLAgentBench/runner.py", line 40, in run
+    final_message = agent.run(env)
+  File "/MLAgentBench/MLAgentBench/agents/agent_research.py", line 214, in run
+    print(anthropic.AI_PROMPT + "\n" + completion + "\nObservation:\n", file=sys.stderr)
+UnboundLocalError: local variable 'completion' referenced before assignment

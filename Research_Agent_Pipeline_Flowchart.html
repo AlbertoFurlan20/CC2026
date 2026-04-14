@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Agent Pipeline</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .mermaid-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 1000px;
+            width: 100%;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="mermaid-container">
+        <h2>Research Agent Pipeline</h2>
+        <div class="mermaid" style="padding-top: 20px; overflow: visible;">
+flowchart TD
+    Start((Start)) --> Init[Initialize Agent with Rigid Prompt]
+    Init --> CheckLoop{Task Complete or<br>Max Steps Reached?}
+    
+    CheckLoop -- Yes --> End((Task Finished))
+    CheckLoop -- No --> BuildPrompt[Construct Context Prompt<br>Retrieve past logs if too long]
+    
+    BuildPrompt --> TrackSetup[Start CodeCarbon Tracker<br>Measure Power]
+    
+    TrackSetup --> LLMCall[Query Local LLM API]
+    
+    LLMCall --> FormatCheck{Valid 6-Section Format<br>& Valid JSON Tool Input?}
+    
+    FormatCheck -- No --> RetryLimit{Under Max Retries?}
+    RetryLimit -- Yes --> AppendError[Append Error Guidance<br>to Prompt] --> LLMCall
+    RetryLimit -- No --> Fail((End with Failure))
+    
+    FormatCheck -- Yes --> StopTrack[Stop CodeCarbon Tracker]
+    
+    StopTrack --> Parse[Parse Action and Input]
+    Parse --> Execute[Execute Tool in Environment]
+    
+    Execute --> ObsCheck{Observation > 5000 chars?}
+    
+    ObsCheck -- Yes --> Sum[Summarize chunks<br>via secondary LLM call] --> History
+    ObsCheck -- No --> History[Save to History Array]
+    
+    History --> MLog[Summarize Step<br>& Append to Research Log]
+    MLog --> CheckLoop
+        </div>
+        <p style="text-align: center; color: #666; font-size: 14px; margin-top: 15px;">
+            <em>Tip: Right-click the diagram above and select "Save image as..." or "Copy image"</em>
+        </p>
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
