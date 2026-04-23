@@ -41,12 +41,13 @@ conda activate vllm_srv
 huggingface-cli login
 
 # 3. Start the vLLM server
-# (Fine-tuned memory limits to fit within ~4.9GB free VRAM with eager mode to save overhead)
+# (Using the 3B parameter model to improve action formatting, with INT4 AWQ)
 python -m vllm.entrypoints.openai.api_server \
-  --model meta-llama/Llama-3.2-1B-Instruct \
+  --model casperhansen/llama-3.2-3b-instruct-awq \
+  --quantization awq \
   --served-model-name llama \
   --gpu-memory-utilization 0.8 \
-  --max-model-len 4096 \
+  --max-model-len 8192 \
   --enforce-eager \
   --port 8002 \
   --tensor-parallel-size 1

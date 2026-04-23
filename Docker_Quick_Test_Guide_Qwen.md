@@ -41,14 +41,13 @@ conda activate vllm_srv
 #huggingface-cli download Qwen/Qwen2.5-1.5B-Instruct
 
 # 3. Start the vLLM server
-# Note: On a 6GB VRAM GPU, 2048 is roughly the max context we can provide.
-# If MLAgentBench prompts exceed this (e.g. 3029 tokens), you will need
-# a GPU with more VRAM (e.g. 12GB+) to increase max-model-len further.
+# (Using the 3B parameter model to improve action formatting, with INT4 AWQ)
 python -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen2.5-1.5B-Instruct \
+  --model Qwen/Qwen2.5-3B-Instruct-AWQ \
+  --quantization awq \
   --served-model-name qwen \
-  --gpu-memory-utilization 0.8 \
-  --max-model-len 2048 \
+  --gpu-memory-utilization 0.9 \
+  --max-model-len 8192 \
   --enforce-eager \
   --port 8002 \
   --tensor-parallel-size 1
