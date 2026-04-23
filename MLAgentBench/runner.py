@@ -1,8 +1,10 @@
-""" 
+"""
 This file is the entry point for MLAgentBench.
 """
 
 import argparse
+import json
+import os
 import sys
 from MLAgentBench import LLM
 from MLAgentBench.environment import Environment
@@ -18,13 +20,52 @@ try:
 except Exception:
     LangChainAgent = None
 
+TASK_DIFFICULTY_FILE = os.path.join(os.path.dirname(__file__), "task_difficulty.json")
+
+def load_task_difficulty():
+    """Load task difficulty classification config."""
+    with open(TASK_DIFFICULTY_FILE, "r") as f:
+        return json.load(f)
+
+def get_task_difficulty(task_name, config=None):
+    """Get difficulty level for a task."""
+    if config is None:
+        config = load_task_difficulty()
+    task_name_lower = task_name.lower()
+    for level, info in config.items():
+        if task_name_lower in [t.lower() for t in info["tasks"]]:
+            return level, info
+    return "medium", config["medium"]  # default to medium
+
+def select_llm_for_difficulty(level, info, args):
+    """Select LLM name based on difficulty and user override."""
+    if args.llm_name:  # user override
+        return args.llm_name
+    return info["llm"]
+
 def run(agent_cls, args):
-    
+
     if args.agent_type == "LangChainAgent" and LangChainAgent is None:
         raise RuntimeError(
             "LangChainAgent no está disponible porque las dependencias de langchain/langchain_core fallan. "
             "Usa ResearchAgent o instala una combinación compatible de LangChain."
         )
+
+    # Load task difficulty and auto-select LLM if not user-specified
+    config = load_task_difficulty()
+    difficulty_level, difficulty_info = get_task_difficulty(args.task, config)
+
+    if not args.llm_name:
+        args.llm_name = select_llm_for_difficulty(difficulty_level, difficulty_info, args)
+        print(f"[vLLM Router] Task '{args.task}' classified as '{difficulty_level}' → LLM: {args.llm_name} (GPU: {difficulty_info['gpu']})", file=sys.stderr)
+    else:
+        print(f"[vLLM Router] User override: LLM={args.llm_name} (task '{args.task}' classified as '{difficulty_level}')", file=sys.stderr)
+
+    # Set fast LLM for summarization (use lighter model)
+    if not args.fast_llm_name:
+        args.fast_llm_name = config["easy"]["llm"]
+        print(f"[vLLM Router] Fast LLM (summarization): {args.fast_llm_name}", file=sys.stderr)
+
     with Environment(args) as env:
 
         print("=====================================")
@@ -34,7 +75,9 @@ def run(agent_cls, args):
         print("Lower level actions enabled: ", [action.name for action in env.low_level_actions])
         print("High level actions enabled: ", [action.name for action in env.high_level_actions])
         print("Read only files: ", env.read_only_files, file=sys.stderr)
-        print("=====================================")  
+        print(f"Difficulty level: {difficulty_level} (GPU: {difficulty_info['gpu']})")
+        print(f"Primary LLM: {args.llm_name}, Fast LLM: {args.fast_llm_name}")
+        print("=====================================")
 
         agent = agent_cls(args, env)
         final_message = agent.run(env)

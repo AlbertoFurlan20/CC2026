@@ -1,0 +1,20 @@
+{
+  "easy": {
+    "tasks": ["cifar10", "spaceship", "house", "vector", "identify", "parkinson"],
+    "llm": "qwen2.5-7b-instruct",
+    "gpu": "L40",
+    "reason": "Standard tutorials, clean data, single-model training"
+  },
+  "medium": {
+    "tasks": ["imdb", "feedback", "fathomnet", "clrs", "ogbn"],
+    "llm": "llama-3.1-8b-instruct",
+    "gpu": "L40",
+    "reason": "NLP/transfer learning, hyperparameter tuning, multi-stage pipelines"
+  },
+  "hard": {
+    "tasks": ["babylm"],
+    "llm": "llama-3.1-8b-instruct",
+    "gpu": "Blackwell",
+    "reason": "Large-scale data, complex architectures, >4hr runtime"
+  }
+}
