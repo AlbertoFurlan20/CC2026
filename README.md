@@ -26,11 +26,22 @@ Containerized Environment: A fully pre-configured Docker environment (~45GB) wit
 
   Hugging Face Token: For accessing gated models like Llama 3.1.
 
-2. Docker Deployment
-```bash
-git clone https://github.com/JDgr12/MLAgentBench.git
-cd MLAgentBench
+1. First things first, setup the tests you want to run by changing the entries in the [tasks file](MLAgentBench/benchmarks/tasks.json)
+```json
+{
+    "cifar10": {
+        "research_problem": "Given a training script on a dataset train.py, improve upon the current performance of the model with a simple change.",
+        "benchmark_folder_name": "cifar10"
+    },
+    "vector": {
+        "research_problem": "Given a training script on a dataset train.py, improve upon the current performance of the model with a simple change.",
+        "benchmark_folder_name": "vector"
+    },
+  ...
+}
 ```
+
+2. Docker Deployment
 ## Build and run
 ```bash
 docker build -t mlagentbench-thesis .
@@ -39,16 +50,37 @@ docker run --gpus all --user root -w /MLAgentBench \
   -p 8001:8000 -p 8002:8002 \
   -v ${PWD}:/MLAgentBench -it mlagentbench-thesis
 ```
-# Quick Start Guide
-Step 1: Start the Inference Server (vLLM)
-Open a new terminal inside the container and launch the model (e.g., Llama 3.1-8B):
 
+# Quick Start Guide
+Step 1: Start the Inference Server (vLLM) - Quantized llama version
 ```bash
 conda activate vllm_srv
 python -m vllm.entrypoints.openai.api_server \
-  --model meta-llama/Llama-3.1-8B-Instruct \
-  --port 8002 --tensor-parallel-size 1
+  --model RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w8a16 \
+  --served-model-name llama-3.1-8B-Instruct \
+  --port 8002 \
+  --tensor-parallel-size 1 \
+  --gpu-memory-utilization 0.85 \
+  --max-model-len 4096 \
+  --max-num-seqs 8 \
+  --max-num-batched-tokens 2048
 ```
+
+Brief note: vLLM performs routing to 2+ models, so you shall serve 2 models, as below
+
+Complete setup:
+```bash
+# Terminal 1 — Llama on 8002                                                                                                             
+python -m vllm.entrypoints.openai.api_server \                                                                                             
+--model RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w8a16 \                                                                            
+--port 8002 --tensor-parallel-size 1 --gpu-memory-utilization 0.85                                                                       
+                                                                                                                                             
+# Terminal 2 — Qwen on 8003                                                                                                                
+python -m vllm.entrypoints.openai.api_server \                                                                                             
+--model Qwen/Qwen2.5-7B-Instruct \                                                                                                       
+--port 8003 --tensor-parallel-size 1 --gpu-memory-utilization 0.85    
+```
+
 Step 2: Run an Agent Task
 In another terminal (inside the container), prepare and run a benchmark task (e.g., cifar10):
 
@@ -56,10 +88,23 @@ In another terminal (inside the container), prepare and run a benchmark task (e.
 ```bash
 python -m MLAgentBench.prepare_task cifar10 $(which python)
 ```
+
+Note: if you get already prepared, you can `rm -rf /MLAgentBench/MLAgentBench/benchmarks/cifar10/scripts/prepared`.
+
 ## 2. Run the agent
 ```bash
 python -m MLAgentBench.runner \
   --task cifar10 --llm-name llama-3.1-8B-Instruct --device cuda
+```
+
+For the quantized version:
+```bash
+python -m MLAgentBench.runner \
+  --task cifar10 \
+  --llm-name llama-3.1-8B-Instruct \
+  --edit-script-llm-name llama-3.1-8B-Instruct \
+  --fast-llm-name llama-3.1-8B-Instruct \
+  --device 0
 ```
 
 # Research Highlights

@@ -2,7 +2,7 @@
 import os
 import sys
 import anthropic
-from MLAgentBench.LLM import complete_text_fast, complete_text
+from MLAgentBench.LLM import complete_text_fast, complete_text, complete_text_with_model
 from MLAgentBench.schema import Action
 from .agent import Agent
 try:
@@ -114,6 +114,38 @@ class ResearchAgent(Agent):
             self.valid_format_entires = args.valid_format_entires
         self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem, format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entires]))
 
+        # Model routing: load task difficulty config
+        self.primary_model = args.llm_name
+        self.fast_model = getattr(args, "fast_llm_name", args.llm_name)
+
+        # Action-based model routing
+        # Heavy model for: planning, fact-checking, complex reasoning
+        # Light model for: routine execution, file ops
+        self.heavy_actions = [
+            "Understand File",
+            "Edit Script (AI)",
+            "Edit Script Segment (AI)",
+            "Reflection",
+            "Retrieval from Research Log",
+        ]
+        self.light_actions = [
+            "List Files",
+            "Read File",
+            "Write File",
+            "Append File",
+            "Copy File",
+            "Execute Script",
+            "Python REPL",
+            "Inspect Script Lines",
+            "Append Summary to Research Log",
+        ]
+
+    def select_model_for_action(self, action_name):
+        """Select model based on action type (heavy vs light)."""
+        if action_name in self.heavy_actions:
+            return self.primary_model
+        return self.fast_model
+
     def run(self, env):
         last_steps = self.args.max_steps_in_context
         last_observation_step = self.args.max_observation_steps_in_context
@@ -201,12 +233,22 @@ class ResearchAgent(Agent):
             try:
                 for attempt in range(self.args.max_retries):
                     try:
-                        completion = complete_text(prompt, log_file, self.args.llm_name)
+                        # First pass: use primary model to get the action
+                        completion = complete_text(prompt, log_file, self.primary_model)
                         entries = self.parse_entries(completion, self.valid_format_entires)
 
                         # Must exists an valid action
                         assert "Action" in entries
                         assert entries["Action"].strip() in self.all_tool_names
+
+                        # Model routing: select model based on action type
+                        selected_model = self.select_model_for_action(entries["Action"].strip())
+
+                        # If different model selected, re-generate with that model for better coherence
+                        if selected_model != self.primary_model:
+                            completion = complete_text_with_model(prompt, log_file, self.primary_model, selected_model)
+                            entries = self.parse_entries(completion, self.valid_format_entires)
+
                         valid_response = True
                     except Exception:
                         # Log for depuration
@@ -360,7 +402,7 @@ Summarize the observation concisely in this format:
 Do not include any result that is guessed rather than directly confirmed by the observation. Do not include additional information or suggestions.
 """
 
-            completion = complete_text_fast(prompt, log_file=log_file +f"_{idx}")
+            completion = complete_text_fast(prompt, log_file=log_file +f"_{idx}", model=self.fast_model)
             descriptions.append(completion)
         if len(descriptions) == 1:
             completion = descriptions[0]

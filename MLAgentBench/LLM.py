@@ -458,29 +458,50 @@ def complete_text(prompt, log_file, model, **kwargs):
         )
     return completion
 
+def complete_text_with_model(prompt, log_file, model, target_model, **kwargs):
+    """
+    Complete text using an explicitly specified target model.
+    Used for step-based model routing (e.g., planning → heavy model, execution → light model).
+
+    Args:
+        prompt: The prompt to complete
+        log_file: Log file path
+        model: Original model (for logging)
+        target_model: The actual model to use for this call
+        **kwargs: Additional args passed to complete_text
+    """
+    if log_file:
+        # Log which model is being used
+        with open(log_file, "a") as f:
+            f.write(f"\n[Model Router] Using target model: {target_model} (original: {model})\n")
+    return complete_text(prompt, log_file, target_model, **kwargs)
+
 # specify fast models for summarization etc
 # Limits based on llama 3.1 and qwen 2.5
 CONTEXT_LIMIT_FAST = 4096  # if someday uses a bigger model 8k/32k, update this
 MAX_OUTPUT_TOKENS_FAST = 128
 MAX_INPUT_TOKENS_FAST = CONTEXT_LIMIT_FAST - MAX_OUTPUT_TOKENS_FAST - 64  # Security margin
 
-def complete_text_fast(prompt, **kwargs):
+def complete_text_fast(prompt, model=None, **kwargs):
     # 1) Cut the prompt if its to long
     try:
         tokens = enc.encode(prompt)
     except Exception:
         tokens = []
     if len(tokens) > MAX_INPUT_TOKENS_FAST:
-        
+
         tokens = tokens[-MAX_INPUT_TOKENS_FAST:]
         prompt = enc.decode(tokens)
 
     # 2) Force a small max output tokens (for summaries, etc)
     max_tokens = kwargs.pop("max_tokens_to_sample", MAX_OUTPUT_TOKENS_FAST)
 
+    # Use explicitly provided model or fall back to global FAST_MODEL
+    target_model = model if model else FAST_MODEL
+
     return complete_text(
         prompt=prompt,
-        model=FAST_MODEL,
+        model=target_model,
         temperature=0.01,
         max_tokens_to_sample=max_tokens,
         log_file=kwargs.pop("log_file", None),
