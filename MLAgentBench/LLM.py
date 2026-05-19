@@ -331,9 +331,8 @@ OPENAI_BASE_URL = (
 )
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "test")
 
-# Config para openai==0.28.x
-openai.api_base = OPENAI_BASE_URL
-openai.api_key = OPENAI_API_KEY
+_sync_client = openai.OpenAI(base_url=OPENAI_BASE_URL, api_key=OPENAI_API_KEY)
+_async_client = openai.AsyncOpenAI(base_url=OPENAI_BASE_URL, api_key=OPENAI_API_KEY)
 
 def _map_logical_to_vllm_model(model: str) -> str:
     """
@@ -372,35 +371,68 @@ def complete_text_openai(
     prompt,
     stop_sequences=None,
     model="gpt-3.5-turbo",
-    max_tokens_to_sample=300, #Change it dependending on the model context length 
-    temperature=0.2,          #if we use the complete prompt (300) or just thought action action input (500)
+    max_tokens_to_sample=300,
+    temperature=0.2,
     log_file=None,
+    system_prompt=None,
     **kwargs,
 ):
-    """
-    Call the OpenAI-compatible API to complete a prompt (in this case vLLM).
-
-    ALWAYS uses the ChatCompletion endpoint, independent of the model name
-    because vLLM exposes both Llama and Qwen as chat models.
-    Also, we map the logical name (--llm-name) to the actual vLLM name.
-    """
+    """Call the OpenAI-compatible API (vLLM) synchronously."""
     if stop_sequences is None:
         stop_sequences = []
 
-    # Logical mapping -> real name in vLLM
     mapped_model = _map_logical_to_vllm_model(model)
 
-    raw_request = {
-        "model": mapped_model,
-        "temperature": temperature,
-        "max_tokens": max_tokens_to_sample,
-        "stop": stop_sequences or None,  # API dont wants an empty list
-        **kwargs,
-    }
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
 
-    messages = [{"role": "user", "content": prompt}]
-    response = openai.ChatCompletion.create(messages=messages, **raw_request)
-    completion = response["choices"][0]["message"]["content"]
+    response = _sync_client.chat.completions.create(
+        model=mapped_model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens_to_sample,
+        stop=stop_sequences or None,
+        **kwargs,
+    )
+    completion = response.choices[0].message.content
+
+    if log_file is not None:
+        log_to_file(log_file, prompt, completion, model, max_tokens_to_sample)
+    return completion
+
+
+async def async_complete_text_openai(
+    prompt,
+    stop_sequences=None,
+    model="gpt-3.5-turbo",
+    max_tokens_to_sample=300,
+    temperature=0.2,
+    log_file=None,
+    system_prompt=None,
+    **kwargs,
+):
+    """Call the OpenAI-compatible API (vLLM) asynchronously."""
+    if stop_sequences is None:
+        stop_sequences = []
+
+    mapped_model = _map_logical_to_vllm_model(model)
+
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    response = await _async_client.chat.completions.create(
+        model=mapped_model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens_to_sample,
+        stop=stop_sequences or None,
+        **kwargs,
+    )
+    completion = response.choices[0].message.content
 
     if log_file is not None:
         log_to_file(log_file, prompt, completion, model, max_tokens_to_sample)
@@ -458,6 +490,19 @@ def complete_text(prompt, log_file, model, **kwargs):
         )
     return completion
 
+
+async def async_complete_text(prompt, log_file, model, system_prompt=None, **kwargs):
+    """Async dispatcher — routes to async vLLM only (workers always use vLLM)."""
+    return await async_complete_text_openai(
+        prompt,
+        stop_sequences=["Observation:"],
+        log_file=log_file,
+        model=model,
+        system_prompt=system_prompt,
+        **kwargs,
+    )
+
+
 def complete_text_with_model(prompt, log_file, model, target_model, **kwargs):
     """
     Complete text using an explicitly specified target model.
@@ -478,32 +523,27 @@ def complete_text_with_model(prompt, log_file, model, target_model, **kwargs):
 
 # specify fast models for summarization etc
 # Limits based on llama 3.1 and qwen 2.5
-CONTEXT_LIMIT_FAST = 4096  # if someday uses a bigger model 8k/32k, update this
-MAX_OUTPUT_TOKENS_FAST = 128
-MAX_INPUT_TOKENS_FAST = CONTEXT_LIMIT_FAST - MAX_OUTPUT_TOKENS_FAST - 64  # Security margin
+CONTEXT_LIMIT_FAST = 4096
+MAX_OUTPUT_TOKENS_FAST = 1024   # was 128 — raised for whiteboard summaries
+MAX_INPUT_TOKENS_FAST = CONTEXT_LIMIT_FAST - MAX_OUTPUT_TOKENS_FAST - 64
 
-def complete_text_fast(prompt, model=None, **kwargs):
-    # 1) Cut the prompt if its to long
+def complete_text_fast(prompt, model=None, max_tokens=None, **kwargs):
     try:
         tokens = enc.encode(prompt)
     except Exception:
         tokens = []
     if len(tokens) > MAX_INPUT_TOKENS_FAST:
-
         tokens = tokens[-MAX_INPUT_TOKENS_FAST:]
         prompt = enc.decode(tokens)
 
-    # 2) Force a small max output tokens (for summaries, etc)
-    max_tokens = kwargs.pop("max_tokens_to_sample", MAX_OUTPUT_TOKENS_FAST)
-
-    # Use explicitly provided model or fall back to global FAST_MODEL
+    max_tokens_to_sample = max_tokens if max_tokens is not None else kwargs.pop("max_tokens_to_sample", MAX_OUTPUT_TOKENS_FAST)
     target_model = model if model else FAST_MODEL
 
     return complete_text(
         prompt=prompt,
         model=target_model,
         temperature=0.01,
-        max_tokens_to_sample=max_tokens,
+        max_tokens_to_sample=max_tokens_to_sample,
         log_file=kwargs.pop("log_file", None),
         **kwargs,
     )

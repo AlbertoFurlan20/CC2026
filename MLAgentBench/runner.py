@@ -3,11 +3,14 @@ This file is the entry point for MLAgentBench.
 """
 
 import argparse
+import asyncio
 import json
 import os
 import sys
 from MLAgentBench import LLM
 from MLAgentBench.environment import Environment
+from MLAgentBench.agents.orchestrator_agent import OrchestratorAgent
+from MLAgentBench.multi_agent.whiteboard import Whiteboard
 from MLAgentBench.agents.agent import Agent, SimpleActionAgent, ReasoningActionAgent
 from MLAgentBench.agents.agent_research import ResearchAgent
 # from MLAgentBench.agents.agent_langchain  import LangChainAgent
@@ -79,10 +82,19 @@ def run(agent_cls, args):
         print(f"Primary LLM: {args.llm_name}, Fast LLM: {args.fast_llm_name}")
         print("=====================================")
 
-        agent = agent_cls(args, env)
-        final_message = agent.run(env)
-        print("=====================================")
-        print("Final message: ", final_message)
+        num_workers = getattr(args, "num_workers", 1)
+        if num_workers > 1:
+            print(f"[Orchestrator] Spawning {num_workers} parallel workers.")
+            whiteboard = Whiteboard()
+            orchestrator = OrchestratorAgent(args=args, whiteboard=whiteboard)
+            best_workspace = asyncio.run(orchestrator.run(env))
+            print(f"[Orchestrator] Best workspace: {best_workspace}")
+        else:
+            LLM.FAST_MODEL = args.fast_llm_name
+            agent = agent_cls(args, env)
+            final_message = agent.run(env)
+            print("=====================================")
+            print("Final message: ", final_message)
 
     env.save("final")
 
@@ -125,8 +137,10 @@ if __name__ == "__main__":
     # Codecarbon is an optional dependency, so we use a flag to enable it in case the user has it installed. 
     # If the user enables it but it's not installed, we'll print a warning and continue without it.
     parser.add_argument("--use-codecarbon", action="store_true",help="Active measure with CodeCarbon if its installed(default is disabled).")
-
-
+    parser.add_argument("--num-workers", type=int, default=1,
+                        help="number of parallel worker agents (1 = single agent mode)")
+    parser.add_argument("--heavy-llm-name", type=str, default="llama-3.1-8b-instruct",
+                        help="model to upgrade workers to when supervisor triggers")
 
     args = parser.parse_args()
     print(args, file=sys.stderr)

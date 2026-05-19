@@ -55,3 +55,35 @@ class Trace:
     low_level_steps: List[Step]
     action_infos: Dict[str, ActionInfo]
     task_description: str
+
+
+from enum import Enum
+from typing import Optional
+
+
+class WorkerStatus(Enum):
+    RUNNING = "running"
+    STAGNANT = "stagnant"
+    DONE = "done"
+    CANCELLED = "cancelled"
+
+
+@dataclass
+class WorkerState:
+    worker_id: str
+    model: str
+    status: WorkerStatus = WorkerStatus.RUNNING
+    current_step: int = 0
+    best_eval_loss: Optional[float] = None
+    last_actions: List[str] = dataclasses.field(default_factory=list)
+    history: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
+
+
+@dataclass
+class WhiteboardEntry:
+    worker_id: str
+    step: int
+    action: str
+    observation: str
+    eval_loss: Optional[float]
+    timestamp: float
