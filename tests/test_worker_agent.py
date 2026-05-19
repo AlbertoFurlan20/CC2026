@@ -30,10 +30,10 @@ async def test_worker_agent_writes_to_whiteboard():
     mock_args.edit_script_llm_name = "qwen2.5-7b-instruct"
     mock_args.edit_script_llm_max_tokens = 1024
 
-    with patch("MLAgentBench.agents.worker_agent.async_complete_text", new=AsyncMock(
+    with patch("MLAgentBench.multi_agent.worker.async_complete_text", new=AsyncMock(
         return_value="Thought: test\nAction: Final Answer\nAction Input: {\"final_answer\": \"done\"}"
     )):
-        from MLAgentBench.agents.worker_agent import WorkerAgent
+        from MLAgentBench.multi_agent.worker import WorkerAgent
         agent = WorkerAgent(worker_id="w0", args=mock_args, env=mock_env, whiteboard=wb)
         await agent.run(mock_env)
 

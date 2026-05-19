@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 @pytest.mark.asyncio
 async def test_orchestrator_returns_best_worker_path():
-    from MLAgentBench.agents.orchestrator_agent import OrchestratorAgent
+    from MLAgentBench.multi_agent.orchestrator import OrchestratorAgent
     from MLAgentBench.multi_agent.whiteboard import Whiteboard
     from MLAgentBench.schema import WorkerState
 
@@ -43,8 +43,8 @@ async def test_orchestrator_returns_best_worker_path():
         await wb.update_worker_state("w0", state)
         return "[Worker w0] Finished"
 
-    with patch("MLAgentBench.agents.orchestrator_agent.WorkerAgent") as MockWorker, \
-         patch("MLAgentBench.agents.orchestrator_agent.WorkspaceManager") as MockMgr:
+    with patch("MLAgentBench.multi_agent.orchestrator.WorkerAgent") as MockWorker, \
+         patch("MLAgentBench.multi_agent.orchestrator.WorkspaceManager") as MockMgr:
 
         mock_worker_inst = MagicMock()
         mock_worker_inst.run = AsyncMock(side_effect=fake_worker_run)

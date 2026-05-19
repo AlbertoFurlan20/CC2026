@@ -9,7 +9,7 @@ import os
 import sys
 from MLAgentBench import LLM
 from MLAgentBench.environment import Environment
-from MLAgentBench.agents.orchestrator_agent import OrchestratorAgent
+from MLAgentBench.multi_agent.orchestrator import OrchestratorAgent
 from MLAgentBench.multi_agent.whiteboard import Whiteboard
 
 TASK_DIFFICULTY_FILE = os.path.join(os.path.dirname(__file__), "task_difficulty.json")

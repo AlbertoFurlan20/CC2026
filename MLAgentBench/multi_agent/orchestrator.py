@@ -4,8 +4,8 @@ import os
 from argparse import Namespace
 from typing import List, Optional
 
-from MLAgentBench.agents.worker_agent import WorkerAgent
-from MLAgentBench.agents.supervisor_agent import SupervisorAgent
+from MLAgentBench.multi_agent.worker import WorkerAgent
+from MLAgentBench.multi_agent.supervisor import SupervisorAgent
 from MLAgentBench.multi_agent.whiteboard import Whiteboard
 from MLAgentBench.multi_agent.workspace_manager import WorkspaceManager
 from MLAgentBench.multi_agent.scoring import select_best_worker

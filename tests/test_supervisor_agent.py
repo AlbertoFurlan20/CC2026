@@ -2,7 +2,7 @@ import asyncio, time
 import pytest
 from MLAgentBench.multi_agent.whiteboard import Whiteboard
 from MLAgentBench.schema import WorkerState, WorkerStatus, WhiteboardEntry
-from MLAgentBench.agents.supervisor_agent import SupervisorAgent
+from MLAgentBench.multi_agent.supervisor import SupervisorAgent
 
 
 def _make_entry(wid, step, action, loss):
