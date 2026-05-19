@@ -2,7 +2,7 @@ from unittest.mock import patch, MagicMock
 import sys
 
 
-def test_runner_routes_to_orchestrator_when_num_workers_gt_1():
+def test_runner_routes_to_orchestrator():
     import argparse
     with patch("MLAgentBench.runner.OrchestratorAgent") as MockOrch, \
          patch("MLAgentBench.runner.Environment") as MockEnv, \
@@ -21,18 +21,17 @@ def test_runner_routes_to_orchestrator_when_num_workers_gt_1():
             task="cifar10", log_dir="/tmp/log", work_dir="/tmp/work",
             max_steps=10, max_time=3600, device=0, python="python",
             interactive=False, resume=None, resume_step=0,
-            agent_type="ResearchAgent", llm_name="", fast_llm_name="",
+            llm_name="", fast_llm_name="",
             heavy_llm_name="llama-3.1-8b-instruct",
             edit_script_llm_name="", edit_script_llm_max_tokens=1024,
             agent_max_steps=10, actions_remove_from_prompt=[],
-            actions_add_to_prompt=[], retrieval=False, valid_format_entires=None,
+            actions_add_to_prompt=[],
             max_steps_in_context=3, max_observation_steps_in_context=3,
-            max_retries=5, langchain_agent="zero-shot-react-description",
-            use_codecarbon=False, num_workers=3,
+            max_retries=5, num_workers=3,
         )
 
         from MLAgentBench.runner import run
-        run(None, args)
+        run(args)
 
         MockOrch.assert_called_once()
         mock_asyncio.run.assert_called_once()

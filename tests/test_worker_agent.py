@@ -22,10 +22,8 @@ async def test_worker_agent_writes_to_whiteboard():
     mock_args.max_steps_in_context = 3
     mock_args.max_observation_steps_in_context = 3
     mock_args.max_retries = 1
-    mock_args.retrieval = False
     mock_args.llm_name = "qwen2.5-7b-instruct"
     mock_args.fast_llm_name = "qwen2.5-7b-instruct"
-    mock_args.valid_format_entires = None
     mock_args.log_dir = "/tmp/test_worker_log"
     mock_args.actions_remove_from_prompt = []
     mock_args.actions_add_to_prompt = []

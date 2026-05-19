@@ -23,8 +23,6 @@ async def test_orchestrator_returns_best_worker_path():
     mock_args.max_steps_in_context = 3
     mock_args.max_observation_steps_in_context = 3
     mock_args.max_retries = 1
-    mock_args.retrieval = False
-    mock_args.valid_format_entires = None
     mock_args.actions_remove_from_prompt = []
     mock_args.actions_add_to_prompt = []
     mock_args.edit_script_llm_name = "qwen2.5-7b-instruct"
