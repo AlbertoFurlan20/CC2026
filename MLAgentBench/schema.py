@@ -55,3 +55,60 @@ class Trace:
     low_level_steps: List[Step]
     action_infos: Dict[str, ActionInfo]
     task_description: str
+
+
+from enum import Enum
+from typing import Optional
+
+
+class WorkerStatus(Enum):
+    RUNNING = "running"
+    STAGNANT = "stagnant"
+    DONE = "done"
+    CANCELLED = "cancelled"
+
+
+@dataclass
+class EmissionsMetrics:
+    emissions_kg: float
+    energy_kwh: float
+    cpu_energy_kwh: float
+    gpu_energy_kwh: float
+    ram_energy_kwh: float
+    duration_s: float
+
+
+@dataclass
+class UtilizationMetrics:
+    cpu_mean: float
+    cpu_max: float
+    ram_mean_gb: float
+    ram_max_gb: float
+    gpu_mean: Optional[float]
+    gpu_max: Optional[float]
+    vram_mean_gb: Optional[float]
+    vram_max_gb: Optional[float]
+    sample_count: int
+
+
+@dataclass
+class WorkerState:
+    worker_id: str
+    model: str
+    status: WorkerStatus = WorkerStatus.RUNNING
+    current_step: int = 0
+    best_eval_loss: Optional[float] = None
+    last_actions: List[str] = dataclasses.field(default_factory=list)
+    history: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
+    emissions: Optional[EmissionsMetrics] = None
+    utilization: Optional[UtilizationMetrics] = None
+
+
+@dataclass
+class WhiteboardEntry:
+    worker_id: str
+    step: int
+    action: str
+    observation: str
+    eval_loss: Optional[float]
+    timestamp: float

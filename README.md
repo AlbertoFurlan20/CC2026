@@ -10,15 +10,17 @@ By performing the clone of the repository, be aware that it already contains all
 For a complete guide step by step please read the "Guide -MLAgentBench user manual.pdf" file
 
 ## Key Features
-Local Model Support: Seamless integration with Llama 3.1-8B and Qwen-2.5-7B using the vLLM inference engine.
+**Multi-Agent Parallel Execution:** An OrchestratorAgent spawns N WorkerAgents in parallel, each operating in an isolated workspace. The best result is selected at completion via eval-loss scoring.
 
-Green AI Monitoring: Integrated CodeCarbon to track real-time energy consumption (GPU, CPU, RAM) and CO2 emissions per agent action.
+**Supervisor-Driven Model Upgrade:** A SupervisorAgent monitors a shared Whiteboard for worker stagnation. When detected, it cancels current workers and re-spawns them with a heavier model (`--heavy-llm-name`).
 
-Rigid Prompting Strategy: Implementation of a "Rigid" structured prompt format that significantly reduces hallucinations and loops, increasing success rates for 7B/8B models.
+**Local Model Support:** Seamless integration with Llama 3.1-8B and Qwen-2.5-7B via the vLLM inference engine using an OpenAI-compatible API.
 
-Variability Analysis: Stress testing using Apache JMeter to evaluate system stability and response consistency under concurrent loads.
+**Workspace Isolation:** Each worker operates in a fully isolated directory copy, preventing interference between parallel runs.
 
-Containerized Environment: A fully pre-configured Docker environment (~45GB) with all dependencies, Conda environments, and tools pre-installed.
+**Variability Analysis:** Stress testing using Apache JMeter to evaluate system stability and response consistency under concurrent loads.
+
+**Containerized Environment:** A fully pre-configured Docker environment (~45GB) with all dependencies, Conda environments, and tools pre-installed.
 
 ## Installation & Setup
 1. Prerequisites
@@ -98,22 +100,25 @@ python -m MLAgentBench.prepare_task cifar10 $(which python)
 
 Note: if you get already prepared, you can `rm -rf /MLAgentBench/MLAgentBench/benchmarks/cifar10/scripts/prepared`.
 
-### 2. Run the agent
-```bash
-python -m MLAgentBench.runner \
-  --task cifar10 --llm-name llama-3.1-8B-Instruct --device 0
-```
-
-For the quantized version:
+### 2. Run the multi-agent orchestrator
 ```bash
 python -m MLAgentBench.runner \
   --task cifar10 \
-  --llm-name llama-3.1-8B-Instruct \
-  --edit-script-llm-name llama-3.1-8B-Instruct \
-  --fast-llm-name llama-3.1-8B-Instruct \
-  --device 0 \
-  --use-codecarbon \
-  --valid-format-entires Thought Action "Action Input"
+  --llm-name qwen2.5-7B-Instruct \
+  --fast-llm-name qwen2.5-7B-Instruct \
+  --edit-script-llm-name qwen2.5-7B-Instruct \
+  --heavy-llm-name llama-3.1-8B-Instruct \
+  --num-workers 4 \
+  --device 0
+```
+
+`--num-workers` controls how many WorkerAgents run in parallel. `--heavy-llm-name` sets the model the supervisor upgrades to on stagnation.
+
+To run multiple independent experiments (e.g., 3 runs × 4 workers):
+```bash
+bash scripts/multi_run_experiment.sh logs/cifar10 cifar10 3 4 \
+  --llm-name qwen2.5-7B-Instruct \
+  --heavy-llm-name llama-3.1-8B-Instruct
 ```
 
 ## Notes on run
@@ -121,9 +126,9 @@ Halting conditions:
 
 ## Research Highlights
 
-Prompt Engineering: Moving from standard prompts to Rigid Prompts improved Qwen-2.5-7B's success rate from 19.4% to 55.6%.
+**Multi-Agent Scaling:** Parallel worker execution across N agents increases benchmark coverage and solution diversity compared to single-agent runs, with the best result selected by eval-loss scoring.
 
-Energy Footprint: Research showed that 89% of the total energy consumption is concentrated in "Edit Script" and "Execute Script" actions.
+**Supervisor-Triggered Upgrade:** Stagnation detection (N consecutive identical actions) triggers a mid-run model upgrade to a heavier LLM, recovering stuck workers without restarting from scratch.
 
-Operational Efficiency: Local deployment offers a sustainable and private alternative to cloud-based LLM APIs for automated software engineering.
-"\n Test" 
+**Operational Efficiency:** Local deployment with vLLM offers a sustainable and private alternative to cloud-based LLM APIs for automated software engineering.
+
