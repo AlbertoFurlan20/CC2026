@@ -33,6 +33,7 @@ class RunRequest(BaseModel):
     max_observation_steps_in_context: Optional[int] = Field(default=None, description="--max-observation-steps-in-context")
     max_retries: Optional[int] = Field(default=None, description="--max-retries")
 
+    use_codecarbon: bool = Field(default=False, description="Enable per-agent and system-wide CodeCarbon tracking")
     python_path: Optional[str] = Field(default=None, description="Python binary path; defaults to sys.executable")
 
 
@@ -76,6 +77,9 @@ def run_task(req: RunRequest):
         "--num-workers", str(req.num_workers),
         "--max-steps", str(req.max_steps),
     ]
+
+    if req.use_codecarbon:
+        cmd.append("--use-codecarbon")
 
     if req.max_steps_in_context is not None:
         cmd += ["--max-steps-in-context", str(req.max_steps_in_context)]

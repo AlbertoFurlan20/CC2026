@@ -9,6 +9,7 @@ from MLAgentBench.multi_agent.supervisor import SupervisorAgent
 from MLAgentBench.multi_agent.whiteboard import Whiteboard
 from MLAgentBench.multi_agent.workspace_manager import WorkspaceManager
 from MLAgentBench.multi_agent.scoring import select_best_worker
+from MLAgentBench.multi_agent.carbon_tracker import SystemCarbonTracker
 
 
 class OrchestratorAgent:
@@ -21,8 +22,15 @@ class OrchestratorAgent:
         self._num_workers = getattr(args, "num_workers", 2)
         self._heavy_model = getattr(args, "heavy_llm_name", args.llm_name)
         self._current_model = args.llm_name
+        self._system_carbon = SystemCarbonTracker(
+            log_dir=args.log_dir,
+            task=getattr(args, "task", "unknown"),
+            enabled=getattr(args, "use_codecarbon", False),
+            device_index=getattr(args, "device", 0),
+        )
 
     async def run(self, env) -> Optional[str]:
+        self._system_carbon.start()
         template_dir = env.work_dir
         upgrade_event = asyncio.Event()
 
@@ -63,6 +71,24 @@ class OrchestratorAgent:
             await supervisor_task
         except asyncio.CancelledError:
             pass
+
+        system_emissions, system_utilization = self._system_carbon.stop()
+        if system_emissions:
+            print(
+                f"[System Emissions] CO2: {system_emissions.emissions_kg:.6f} kg | "
+                f"Energy: {system_emissions.energy_kwh:.6f} kWh | "
+                f"Duration: {system_emissions.duration_s:.1f}s"
+            )
+        if system_utilization:
+            print(
+                f"[System Utilization] CPU mean/max: {system_utilization.cpu_mean:.1f}%/{system_utilization.cpu_max:.1f}% | "
+                f"RAM mean/max: {system_utilization.ram_mean_gb:.2f}/{system_utilization.ram_max_gb:.2f} GB"
+                + (
+                    f" | GPU mean/max: {system_utilization.gpu_mean:.1f}%/{system_utilization.gpu_max:.1f}%"
+                    f" | VRAM mean/max: {system_utilization.vram_mean_gb:.2f}/{system_utilization.vram_max_gb:.2f} GB"
+                    if system_utilization.gpu_mean is not None else ""
+                )
+            )
 
         best_id = select_best_worker(self.whiteboard)
         if best_id is None:

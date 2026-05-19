@@ -101,6 +101,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--num-workers", type=int, default=2, help="number of parallel worker agents")
     parser.add_argument("--heavy-llm-name", type=str, default="llama-3.1-8b-instruct", help="model for supervisor upgrade")
+    parser.add_argument("--use-codecarbon", action="store_true", help="enable per-agent and system-wide CodeCarbon tracking")
 
     args = parser.parse_args()
     print(args, file=sys.stderr)

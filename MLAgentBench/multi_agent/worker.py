@@ -7,6 +7,7 @@ from typing import Optional
 from MLAgentBench.LLM import async_complete_text, complete_text_fast
 from MLAgentBench.multi_agent.whiteboard import Whiteboard
 from MLAgentBench.multi_agent.scoring import extract_eval_loss
+from MLAgentBench.multi_agent.carbon_tracker import AgentCarbonTracker
 from MLAgentBench.schema import Action, WorkerState, WorkerStatus, WhiteboardEntry
 from MLAgentBench.agents.agent import Agent
 
@@ -27,6 +28,12 @@ class WorkerAgent(Agent):
         self.primary_model = args.llm_name
         self.fast_model = getattr(args, "fast_llm_name", args.llm_name)
         self._state = WorkerState(worker_id=worker_id, model=self.primary_model)
+        self._carbon = AgentCarbonTracker(
+            worker_id=worker_id,
+            log_dir=self.log_dir,
+            enabled=getattr(args, "use_codecarbon", False),
+            device_index=getattr(args, "device", 0),
+        )
 
     async def _llm_call(self, prompt: str, log_file: str) -> str:
         return await async_complete_text(
@@ -62,6 +69,7 @@ class WorkerAgent(Agent):
         await self.whiteboard.update_worker_state(self.worker_id, self._state)
 
     async def run(self, env) -> str:
+        self._carbon.start()
         await self.whiteboard.update_worker_state(self.worker_id, self._state)
 
         while not env.is_final() and len(self.history_steps) < self.args.agent_max_steps:
@@ -113,6 +121,7 @@ class WorkerAgent(Agent):
 
             await self._report(curr_step, action, observation)
 
+        emissions, utilization = self._carbon.stop()
         done_state = WorkerState(
             worker_id=self.worker_id,
             model=self._state.model,
@@ -121,6 +130,8 @@ class WorkerAgent(Agent):
             best_eval_loss=self._state.best_eval_loss,
             last_actions=self._state.last_actions,
             history=self._state.history,
+            emissions=emissions,
+            utilization=utilization,
         )
         await self.whiteboard.update_worker_state(self.worker_id, done_state)
         return f"[Worker {self.worker_id}] Finished. Best eval loss: {self._state.best_eval_loss}"

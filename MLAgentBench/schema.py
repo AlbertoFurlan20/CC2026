@@ -69,6 +69,29 @@ class WorkerStatus(Enum):
 
 
 @dataclass
+class EmissionsMetrics:
+    emissions_kg: float
+    energy_kwh: float
+    cpu_energy_kwh: float
+    gpu_energy_kwh: float
+    ram_energy_kwh: float
+    duration_s: float
+
+
+@dataclass
+class UtilizationMetrics:
+    cpu_mean: float
+    cpu_max: float
+    ram_mean_gb: float
+    ram_max_gb: float
+    gpu_mean: Optional[float]
+    gpu_max: Optional[float]
+    vram_mean_gb: Optional[float]
+    vram_max_gb: Optional[float]
+    sample_count: int
+
+
+@dataclass
 class WorkerState:
     worker_id: str
     model: str
@@ -77,6 +100,8 @@ class WorkerState:
     best_eval_loss: Optional[float] = None
     last_actions: List[str] = dataclasses.field(default_factory=list)
     history: List[Dict[str, Any]] = dataclasses.field(default_factory=list)
+    emissions: Optional[EmissionsMetrics] = None
+    utilization: Optional[UtilizationMetrics] = None
 
 
 @dataclass
