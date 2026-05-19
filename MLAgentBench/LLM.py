@@ -330,6 +330,9 @@ OPENAI_BASE_URL = (
     or os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:8002/v1")
 )
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "test")
+SAMPLING_TOP_P: float | None = None
+SAMPLING_BEST_OF: int | None = None
+SAMPLING_N: int | None = None
 
 # Config para openai==0.28.x
 openai.api_base = OPENAI_BASE_URL
@@ -397,6 +400,12 @@ def complete_text_openai(
         "stop": stop_sequences or None,  # API dont wants an empty list
         **kwargs,
     }
+    if SAMPLING_TOP_P is not None:
+        raw_request["top_p"] = SAMPLING_TOP_P
+    if SAMPLING_BEST_OF is not None:
+        raw_request["best_of"] = SAMPLING_BEST_OF
+    if SAMPLING_N is not None:
+        raw_request["n"] = SAMPLING_N
 
     messages = [{"role": "user", "content": prompt}]
     response = openai.ChatCompletion.create(messages=messages, **raw_request)
