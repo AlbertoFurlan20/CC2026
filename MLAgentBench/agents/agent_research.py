@@ -188,10 +188,7 @@ class ResearchAgent(Agent):
                 if curr_step - idx > last_observation_step:
                     prompt += "<Done>\n\n"
                 else:
-                    try:
-                        prompt += "\n```\n" + self.history_steps[idx]["observation"] + "\n```\n\n"
-                    except:
-                        import pdb; pdb.set_trace()
+                    prompt += "\n```\n" + str(self.history_steps[idx]["observation"]) + "\n```\n\n"
                 
 
             ###############################################
@@ -212,17 +209,20 @@ class ResearchAgent(Agent):
             if use_cc and HAVE_CODECARBON:
                 cc_dir = os.path.join(self.args.log_dir, "codecarbon")
                 os.makedirs(cc_dir, exist_ok=True)
-                tracker = EmissionsTracker(
-                    project_name=f"{self.args.task}-{self.args.agent_type}-{self.args.llm_name}",
-                    output_dir=cc_dir,
-                    output_file=f"step_{curr_step:04d}_LLM.csv",  
-                    measure_power_secs=1,
-                    save_to_file=True,
-                    log_level="error",
-                    gpu_ids=[self.args.device] if isinstance(self.args.device, int) else None
-                )
-
-                tracker.start()
+                try:
+                    tracker = EmissionsTracker(
+                        project_name=f"{self.args.task}-{self.args.agent_type}-{self.args.llm_name}",
+                        output_dir=cc_dir,
+                        output_file=f"step_{curr_step:04d}_LLM.csv",
+                        measure_power_secs=1,
+                        save_to_file=True,
+                        log_level="error",
+                        gpu_ids=[self.args.device] if isinstance(self.args.device, int) else None
+                    )
+                    tracker.start()
+                except Exception as e:
+                    tracker = None
+                    print(f"[CodeCarbon Warning] tracker could not start for step {curr_step}: {e}", file=sys.stderr)
             elif use_cc and not HAVE_CODECARBON:
                 # If the user enabled CodeCarbon but it's not installed, we print a warning and continue without it.
                 print(
