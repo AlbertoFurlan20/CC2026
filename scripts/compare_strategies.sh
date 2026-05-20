@@ -53,6 +53,7 @@ run_once() {
         --work-dir "${work_dir}" \
         --llm-name "${LLM_NAME}" \
         --fast-llm-name "${FAST_LLM_NAME}" \
+        --edit-script-llm-name "${LLM_NAME}" \
         --max-steps "${MAX_STEPS}" \
         ${extra_args} \
         > "${stdout_file}" 2>&1 \
