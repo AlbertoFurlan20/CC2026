@@ -236,18 +236,20 @@ class ResearchAgent(Agent):
                         # First pass: use primary model to get the action
                         completion = complete_text(prompt, log_file, self.primary_model)
                         entries = self.parse_entries(completion, self.valid_format_entires)
+                        entries["Action"] = entries["Action"].strip().split("\n")[0].strip()
 
                         # Must exists an valid action
                         assert "Action" in entries
-                        assert entries["Action"].strip() in self.all_tool_names
+                        assert entries["Action"] in self.all_tool_names
 
                         # Model routing: select model based on action type
-                        selected_model = self.select_model_for_action(entries["Action"].strip())
+                        selected_model = self.select_model_for_action(entries["Action"])
 
                         # If different model selected, re-generate with that model for better coherence
                         if selected_model != self.primary_model:
                             completion = complete_text_with_model(prompt, log_file, self.primary_model, selected_model)
                             entries = self.parse_entries(completion, self.valid_format_entires)
+                            entries["Action"] = entries["Action"].strip().split("\n")[0].strip()
 
                         valid_response = True
                     except Exception:

@@ -275,7 +275,8 @@ class SimpleActionAgent(Agent):
 
                 try:
                     entries = self.parse_entries(completion, self.valid_format_entires)
-                    assert entries["Action"].strip() in self.all_tool_names
+                    entries["Action"] = entries["Action"].strip().split("\n")[0].strip()
+                    assert entries["Action"] in self.all_tool_names
                     valid_response = True
                 except:
                     print("Step", curr_step, file=sys.stderr)
