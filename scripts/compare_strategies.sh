@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
+
 # Usage: bash scripts/compare_strategies.sh [TASK] [LLM_NAME] [FAST_LLM] [MAX_STEPS]
-# Example: bash scripts/compare_strategies.sh cifar10 llama-3.1-8B-Instruct llama-3.1-8B-Instruct 30
+# - Example: bash scripts/compare_strategies.sh cifar10 llama-3.1-8B-Instruct llama-3.1-8B-Instruct 30
+
 set -euo pipefail
 
 PYTHON="${PYTHON:-python}"
@@ -24,9 +26,7 @@ if [ ! -f "${REPO_ROOT}/${RESULTS_FILE}" ]; then
         > "${REPO_ROOT}/${RESULTS_FILE}"
 fi
 
-# ------------------------------------------------------------------
-# run_once STRATEGY RUN_ID EXTRA_ARGS TOP_P BEST_OF N_SAMPLES
-# ------------------------------------------------------------------
+# region run_once [STRATEGY RUN_ID EXTRA_ARGS TOP_P BEST_OF N_SAMPLES]
 run_once() {
     local strategy="$1"
     local run_id="$2"
@@ -68,13 +68,24 @@ run_once() {
             --log-folder "${log_dir}" \
             --task "${TASK}" \
             --output-file "${eval_json}" \
-            > /dev/null 2>&1 || true
+            --eval-intermediate \
+            > "${log_dir}/eval.log" 2>&1 || true
 
         score=$(EVAL_JSON="${eval_json}" ${PYTHON} - <<'PYEOF'
 import json, os
 try:
     d = json.load(open(os.environ["EVAL_JSON"]))
-    vals = [v["final_score"] for v in d.values() if isinstance(v, dict) and v.get("final_score", -1) >= 0]
+    vals = []
+    for v in d.values():
+        if not isinstance(v, dict):
+            continue
+        fs = v.get("final_score", -1)
+        if isinstance(fs, (int, float)) and fs >= 0:
+            vals.append(fs)
+        else:
+            step_scores = [s for s in (v.get("score") or []) if isinstance(s, (int, float)) and s >= 0]
+            if step_scores:
+                vals.append(max(step_scores))
     print(max(vals) if vals else "NA")
 except Exception:
     print("NA")
@@ -89,17 +100,15 @@ PYEOF
 
     echo "[${strategy}] run_id=${run_id} score=${score} time=${wall_time}s status=${status}"
 }
+# endregion
 
-# ------------------------------------------------------------------
-# Strategy 1: Best-of-N n=1
-# ------------------------------------------------------------------
+# region best-of-n n=1
 echo ""
 echo "=== Best-of-N n=1 (1 run) ==="
 run_once "best_of_n_1" "bon1_$(date +%s)" "" "default" "default" "default"
+# endregion
 
-# ------------------------------------------------------------------
-# Strategy 2: Best-of-N n=3
-# ------------------------------------------------------------------
+# region best-of-n n=3
 echo ""
 echo "=== Best-of-N n=3 (3 runs, pick best) ==="
 best_score=""
@@ -118,16 +127,19 @@ for i in 1 2 3; do
             best_run="${run_id}"
         fi
     fi
-    # Avoid same-second run_id collision
     sleep 1
 done
-echo "[best_of_n_3] winner → run_id=${best_run} score=${best_score}"
+if [ -z "${best_run}" ]; then
+    echo "[best_of_n_3] no scored winner (all runs returned score=NA — check eval.log in each run dir)"
+else
+    echo "[best_of_n_3] winner → run_id=${best_run} score=${best_score}"
+fi
+# endregion
 
-# ------------------------------------------------------------------
-# Strategy 3: GridSearch
-# ------------------------------------------------------------------
+# region gridsearch
 echo ""
 echo "=== GridSearch (${#TOP_P_VALUES[@]} top_p × ${#BEST_OF_VALUES[@]} best_of = $((${#TOP_P_VALUES[@]} * ${#BEST_OF_VALUES[@]})) runs) ==="
+echo "NOTE: some vLLM versions ignore 'best_of' server-side — verify in run logs if best_of>1 has effect"
 for top_p in "${TOP_P_VALUES[@]}"; do
     for best_of in "${BEST_OF_VALUES[@]}"; do
         ts=$(date +%s)
@@ -140,9 +152,8 @@ for top_p in "${TOP_P_VALUES[@]}"; do
     done
 done
 
-# ------------------------------------------------------------------
-# Summary
-# ------------------------------------------------------------------
+# endregion
+
 echo ""
 echo "=== All runs complete. Results: ${RESULTS_FILE} ==="
 echo ""
