@@ -17,6 +17,14 @@ echo "Using STORAGE_DIR = ${STORAGE_DIR}"
 
 mkdir -p "${STORAGE_DIR}/logs" "${STORAGE_DIR}/workspace"
 
+# Guard: STORAGE_DIR on docker overlay FS = not bind-mounted, data lost on container rm.
+if df -T "${STORAGE_DIR}" 2>/dev/null | awk 'NR==2 {exit ($2!="overlay")}'; then
+    echo "ERROR: STORAGE_DIR=${STORAGE_DIR} is on docker overlay FS (not bind-mounted from host)." >&2
+    echo "       Data will be lost when container is removed." >&2
+    echo "       Fix: add '-v /data:/data' to docker run, or set STORAGE_DIR to a bind-mounted path." >&2
+    exit 1
+fi
+
 if [ ! -f "${REPO_ROOT}/${CONFIG_JSON}" ]; then
     echo "config not found: ${REPO_ROOT}/${CONFIG_JSON}" >&2
     exit 1

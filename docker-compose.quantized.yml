@@ -17,16 +17,15 @@ services:
     shm_size: "8gb"
     command: >
       python -m vllm.entrypoints.openai.api_server
-      --model meta-llama/Llama-3.1-8B-Instruct
+      --model RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w8a16
       --served-model-name llama-3.1-8B-Instruct
       --port 8002
       --host 0.0.0.0
       --tensor-parallel-size 1
       --gpu-memory-utilization 0.85
-      --max-model-len 8192
-      --max-num-seqs 32
-      --max-num-batched-tokens 32768
-      --enable-prefix-caching
+      --max-model-len 4096
+      --max-num-seqs 8
+      --max-num-batched-tokens 2048
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8002/v1/models || exit 1"]
       interval: 15s
