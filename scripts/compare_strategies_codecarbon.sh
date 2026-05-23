@@ -11,6 +11,8 @@ set -euo pipefail
 PYTHON="${PYTHON:-python}"
 CONFIG_JSON="${1:-configs/comparison_grid.json}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+STORAGE_DIR="${STORAGE_DIR:-${REPO_ROOT}}"
+mkdir -p "${STORAGE_DIR}/logs" "${STORAGE_DIR}/workspace"
 
 if [ ! -f "${REPO_ROOT}/${CONFIG_JSON}" ]; then
     echo "config not found: ${REPO_ROOT}/${CONFIG_JSON}" >&2
@@ -37,13 +39,13 @@ FAST_LLM_NAME="${FIXED_FAST_LLM}"
 MAX_STEPS="${FIXED_MAX_STEPS}"
 # endregion
 
-RESULTS_DIR="${OUTPUT_DIR}/${EXP_NAME}_codecarbon"
+RESULTS_DIR="${STORAGE_DIR}/${OUTPUT_DIR}/${EXP_NAME}_codecarbon"
 RESULTS_FILE="${RESULTS_DIR}/summary.csv"
-mkdir -p "${REPO_ROOT}/${RESULTS_DIR}"
+mkdir -p "${RESULTS_DIR}"
 
-if [ ! -f "${REPO_ROOT}/${RESULTS_FILE}" ]; then
+if [ ! -f "${RESULTS_FILE}" ]; then
     echo "config_idx,run,top_p,temperature,run_id,score,wall_time_s,avg_time_per_step,emissions_kg,energy_kwh,cc_duration_s,status" \
-        > "${REPO_ROOT}/${RESULTS_FILE}"
+        > "${RESULTS_FILE}"
 fi
 
 # region run_once [CONFIG_IDX RUN_IDX TOP_P TEMPERATURE]
@@ -58,8 +60,8 @@ run_once() {
     local ts run_id log_dir work_dir stdout_file
     ts=$(date +%s)
     run_id="cc_c${config_idx}_r${run_idx}_tp${tp_safe}_tm${tm_safe}_${ts}"
-    log_dir="${REPO_ROOT}/logs/${run_id}"
-    work_dir="${REPO_ROOT}/workspace/${run_id}"
+    log_dir="${STORAGE_DIR}/logs/${run_id}"
+    work_dir="${STORAGE_DIR}/workspace/${run_id}"
     stdout_file="${log_dir}/stdout.txt"
     mkdir -p "${log_dir}" "${work_dir}"
 
@@ -146,7 +148,7 @@ PYEOF
 )
 
     echo "${config_idx},${run_idx},${top_p},${temperature},${run_id},${score},${wall_time},${avg_step},${emissions_kg},${energy_kwh},${cc_duration_s},${status}" \
-        >> "${REPO_ROOT}/${RESULTS_FILE}"
+        >> "${RESULTS_FILE}"
 
     echo "[cfg=${config_idx} run=${run_idx}] tp=${top_p} tm=${temperature} score=${score} time=${wall_time}s emissions=${emissions_kg}kg energy=${energy_kwh}kWh status=${status}"
 }
@@ -176,5 +178,5 @@ done < "${COMBOS_TMP}"
 echo ""
 echo "=== All runs complete. Results: ${RESULTS_FILE} ==="
 echo ""
-column -t -s ',' "${REPO_ROOT}/${RESULTS_FILE}" 2>/dev/null \
-    || cat "${REPO_ROOT}/${RESULTS_FILE}"
+column -t -s ',' "${RESULTS_FILE}" 2>/dev/null \
+    || cat "${RESULTS_FILE}"
