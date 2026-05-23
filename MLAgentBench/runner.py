@@ -130,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--top-p", type=float, default=None, help="vLLM top_p sampling parameter")
     parser.add_argument("--best-of", type=int, default=None, help="vLLM best_of: candidates generated, best returned")
     parser.add_argument("--n-samples", type=int, default=None, help="vLLM n: number of sequences per request")
+    parser.add_argument("--temperature", type=float, default=None, help="vLLM temperature override (applies to LLM calls in agent loop)")
 
     args = parser.parse_args()
     print(args, file=sys.stderr)
@@ -140,4 +141,5 @@ if __name__ == "__main__":
     LLM.SAMPLING_TOP_P = args.top_p
     LLM.SAMPLING_BEST_OF = args.best_of
     LLM.SAMPLING_N = args.n_samples
+    LLM.SAMPLING_TEMPERATURE = args.temperature
     run(getattr(sys.modules[__name__], args.agent_type), args)

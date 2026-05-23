@@ -333,6 +333,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "test")
 SAMPLING_TOP_P: float | None = None
 SAMPLING_BEST_OF: int | None = None
 SAMPLING_N: int | None = None
+SAMPLING_TEMPERATURE: float | None = None
 
 # Config para openai==0.28.x
 openai.api_base = OPENAI_BASE_URL
@@ -393,9 +394,10 @@ def complete_text_openai(
     # Logical mapping -> real name in vLLM
     mapped_model = _map_logical_to_vllm_model(model)
 
+    effective_temperature = SAMPLING_TEMPERATURE if SAMPLING_TEMPERATURE is not None else temperature
     raw_request = {
         "model": mapped_model,
-        "temperature": temperature,
+        "temperature": effective_temperature,
         "max_tokens": max_tokens_to_sample,
         "stop": stop_sequences or None,  # API dont wants an empty list
         **kwargs,
