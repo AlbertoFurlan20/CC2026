@@ -1,0 +1,58 @@
+services:
+  vllm:
+    image: mlagentbench-thesis
+    container_name: mlagentbench-vllm
+    runtime: nvidia
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - .:/MLAgentBench
+      - hf_cache:/root/.cache/huggingface
+    working_dir: /MLAgentBench
+    ports:
+      - "8002:8002"
+    ipc: host
+    shm_size: "8gb"
+    command: >
+      python -m vllm.entrypoints.openai.api_server
+      --model meta-llama/Llama-3.1-8B-Instruct
+      --served-model-name llama-3.1-8B-Instruct
+      --port 8002
+      --host 0.0.0.0
+      --tensor-parallel-size 1
+      --gpu-memory-utilization 0.85
+      --max-model-len 8192
+      --max-num-seqs 32
+      --max-num-batched-tokens 32768
+      --enable-prefix-caching
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8002/v1/models || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 120s
+    restart: unless-stopped
+
+  bench:
+    image: mlagentbench-thesis
+    container_name: mlagentbench-bench
+    runtime: nvidia
+    depends_on:
+      vllm:
+        condition: service_healthy
+    environment:
+      - OPENAI_BASE_URL=http://vllm:8002/v1
+      - OPENAI_API_KEY=EMPTY
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - .:/MLAgentBench
+    working_dir: /MLAgentBench
+    ipc: host
+    shm_size: "8gb"
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+volumes:
+  hf_cache:

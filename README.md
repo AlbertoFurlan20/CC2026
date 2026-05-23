@@ -66,6 +66,21 @@ python -m vllm.entrypoints.openai.api_server \
   --max-num-batched-tokens 2048
 ```
 
+Step 1: Start the Inference Server (vLLM)
+```bash
+conda activate vllm_srv
+export HF_TOKEN="<your_hf_token>" && python -m vllm.entrypoints.openai.api_server \
+    --model meta-llama/Llama-3.1-8B-Instruct \                                                                                              
+    --served-model-name llama-3.1-8B-Instruct \                                                                                             
+    --port 8002 \                                                                                                                           
+    --tensor-parallel-size 1 \                                                                                                              
+    --gpu-memory-utilization 0.85 \                                                                                                         
+    --max-model-len 8192 \                                                                                                                  
+    --max-num-seqs 32 \                                                                                                                     
+    --max-num-batched-tokens 32768 \                                                                                                        
+    --enable-prefix-caching
+```
+
 Brief note: vLLM performs routing to 2+ models, so you shall serve 2 models, as below
 
 Complete setup:
@@ -94,7 +109,7 @@ Note: if you get already prepared, you can `rm -rf /MLAgentBench/MLAgentBench/be
 ## 2. Run the agent
 ```bash
 python -m MLAgentBench.runner \
-  --task cifar10 --llm-name llama-3.1-8B-Instruct --device cuda
+  --task cifar10 --llm-name llama-3.1-8B-Instruct --device 0
 ```
 
 For the quantized version:
@@ -106,6 +121,76 @@ python -m MLAgentBench.runner \
   --fast-llm-name llama-3.1-8B-Instruct \
   --device 0
 ```
+
+# Detached Execution (Docker Compose)
+
+For long runs on a remote VM where you need to disconnect SSH and let the
+container keep running until the experiment finishes, use the provided
+`docker-compose.yml`. It defines two services:
+
+- `vllm` — inference server on port 8002 (GPU)
+- `bench` — idle container for running comparison scripts, talks to `vllm`
+  via service DNS (`OPENAI_BASE_URL=http://vllm:8002/v1`)
+
+## One-time setup on the VM
+
+```bash
+cp .env.example .env
+# edit .env and set HF_TOKEN=hf_...
+```
+
+The image must already be built locally (`docker build -t mlagentbench-thesis .`).
+
+## Run detached
+
+```bash
+# 1. Start vLLM detached. Container survives SSH disconnect (Docker daemon
+#    owns the process, not your shell).
+docker compose up -d vllm
+
+# 2. Wait until healthy. The bench service depends on the vLLM healthcheck
+#    (HTTP GET /v1/models). You can poll status:
+docker compose ps
+
+# 3. Start the bench container (idle, also detached).
+docker compose up -d bench
+
+# 4. Launch a comparison script detached inside bench, redirecting output
+#    to a log file in the bind-mounted repo.
+docker compose exec -d bench bash -lc \
+  'bash scripts/compare_strategies_codecarbon.sh > logs/bench_$(date +%s).log 2>&1'
+
+# or the Best-of-N script:
+docker compose exec -d bench bash -lc \
+  'bash scripts/compare_bestofn_codecarbon.sh > logs/bench_$(date +%s).log 2>&1'
+
+# 5. Safe to disconnect.
+exit
+```
+
+## Reattach later
+
+```bash
+ssh vm
+docker compose ps                   # status of both services
+docker compose logs -f vllm         # live vLLM logs
+tail -f logs/bench_*.log            # live bench script logs
+```
+
+## Stop everything
+
+```bash
+docker compose down
+```
+
+Notes:
+- vLLM is bound to `0.0.0.0` so the `bench` container can reach it at
+  `vllm:8002`. The host-side port `8002` is also published for debugging.
+- Both containers share the GPU. vLLM reserves 85% of GPU memory; the
+  benchmark training task uses the rest. Lower `--gpu-memory-utilization`
+  in `docker-compose.yml` if you hit OOM.
+- HuggingFace weights are cached in the named volume `hf_cache` so model
+  downloads survive container restarts.
 
 # Research Highlights
 
