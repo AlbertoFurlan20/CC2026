@@ -12,6 +12,9 @@ PYTHON="${PYTHON:-python}"
 CONFIG_JSON="${1:-configs/comparison_grid.json}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STORAGE_DIR="${STORAGE_DIR:-${REPO_ROOT}}"
+
+echo "Using STORAGE_DIR = ${STORAGE_DIR}"
+
 mkdir -p "${STORAGE_DIR}/logs" "${STORAGE_DIR}/workspace"
 
 if [ ! -f "${REPO_ROOT}/${CONFIG_JSON}" ]; then
