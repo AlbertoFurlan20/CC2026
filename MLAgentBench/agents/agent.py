@@ -228,12 +228,13 @@ class Agent:
         pattern = ""
         for e in entries:
             e = e.replace("[", "\[").replace("]", "\]")
-            pattern += f"{e}:([\s\S]*)"
+            pattern += f"{e}:([\s\S]*?)"
+        pattern += r"(?=(?:Reflection|Research Plan and Status|Fact Check|Thought|Action|Action Input):|$)"
         result = re.search(pattern, s, re.MULTILINE)
         if result is None:
             raise Exception("Invalid: " + s)
 
-        parsed = [r for r in result.groups()]
+        parsed = [r.strip() for r in result.groups()]
         return {e: parsed[idx]  for idx, e in enumerate(entries)}
 
 class SimpleActionAgent(Agent):

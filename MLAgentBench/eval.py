@@ -125,29 +125,50 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 def oom_error(path):
-    log = path.replace("trace.json", "../log")
-    main_log = path.replace("trace.json", "../agent_log/main_log")
+    env_log_dir = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+    log = os.path.join(env_log_dir, "log")
+    main_log = os.path.join(env_log_dir, "agent_log", "main_log")
     message = "CUDA out of memory"
-    return (message in open(log, "r").read()) or (message in open(main_log, "r").read())
+    log_content = ""
+    main_log_content = ""
+    if os.path.exists(log):
+        log_content = open(log, "r").read()
+    if os.path.exists(main_log):
+        main_log_content = open(main_log, "r").read()
+    return (message in log_content) or (message in main_log_content)
     
 
 def connection_error(path):
-    log = path.replace("trace.json", "../log")
-    main_log = path.replace("trace.json", "../agent_log/main_log")
+    env_log_dir = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+    log = os.path.join(env_log_dir, "log")
+    main_log = os.path.join(env_log_dir, "agent_log", "main_log")
     bad = ["You exceeded your current quota, please check your plan and billing details.", "Error: 'text-similarity-ada-001'", "Error: 'text-embedding-ada-001'"]
-    return ("Connection aborted" in open(log, "r").read()) or (any([b in open(main_log, "r").read() for b in bad])) 
+    log_content = ""
+    main_log_content = ""
+    if os.path.exists(log):
+        log_content = open(log, "r").read()
+    if os.path.exists(main_log):
+        main_log_content = open(main_log, "r").read()
+    return ("Connection aborted" in log_content) or (any([b in main_log_content for b in bad])) 
 
 def error(path):
-    return os.path.exists(os.path.join(path.replace("trace.json", ""), "error.txt")) or not os.path.exists(os.path.join(path.replace("trace.json", ""), "overall_time.txt"))
+    step_files_dir = os.path.dirname(path)
+    return os.path.exists(os.path.join(step_files_dir, "error.txt")) or not os.path.exists(os.path.join(step_files_dir, "overall_time.txt"))
 
 
 def json_error(path):
-    main_log = path.replace("trace.json", "../agent_log/main_log")
-    return open(main_log, "r").read().count("JSONDecodeError") > 2
+    env_log_dir = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+    main_log = os.path.join(env_log_dir, "agent_log", "main_log")
+    if os.path.exists(main_log):
+        return open(main_log, "r").read().count("JSONDecodeError") > 2
+    return False
 
 def long_prompt_error(path):
-    main_log = path.replace("trace.json", "../agent_log/main_log")
-    return "EnvError: too long input for the tool" in open(main_log, "r").read()
+    env_log_dir = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+    main_log = os.path.join(env_log_dir, "agent_log", "main_log")
+    if os.path.exists(main_log):
+        return "EnvError: too long input for the tool" in open(main_log, "r").read()
+    return False
 
 @dataclass
 class EvaluationResult:
