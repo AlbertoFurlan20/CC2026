@@ -177,6 +177,16 @@ docker compose logs -f vllm         # live vLLM logs
 tail -f logs/bench_*.log            # live bench script logs
 ```
 
+## Refs Alberto's vm (ease-of-life)
+```bash
+docker compose exec -d bench bash -lc \
+    'mkdir -p /data/CC2026_STORAGE_DIR && \
+    STORAGE_DIR=/data/CC2026_STORAGE_DIR \
+    bash scripts/compare_strategies_codecarbon.sh > /data/CC2026_STORAGE_DIR/run_$(date +%s).log 2>&1'
+# Then just
+tail -f /data/CC2026_STORAGE_DIR/run_*.log
+```
+
 ## Stop everything
 
 ```bash
