@@ -45,7 +45,7 @@ RESULTS_FILE="${RESULTS_DIR}/summary.csv"
 mkdir -p "${RESULTS_DIR}"
 
 if [ ! -f "${RESULTS_FILE}" ]; then
-    echo "config_idx,run,top_p,temperature,run_id,score,wall_time_s,avg_time_per_step,status" \
+    echo "config_idx,run,top_p,temperature,run_id,log_dir,work_dir,score,wall_time_s,avg_time_per_step,status" \
         > "${RESULTS_FILE}"
 fi
 
@@ -122,10 +122,12 @@ PYEOF
 
     avg_step=$(awk "BEGIN { if (${MAX_STEPS}+0 > 0) printf \"%.3f\", ${wall_time}/${MAX_STEPS}; else print \"NA\" }")
     echo "${score}" > "${log_dir}/.score"
-    echo "${config_idx},${run_idx},${top_p},${temperature},${run_id},${score},${wall_time},${avg_step},${status}" \
+    echo "${config_idx},${run_idx},${top_p},${temperature},${run_id},${log_dir},${work_dir},${score},${wall_time},${avg_step},${status}" \
         >> "${RESULTS_FILE}"
 
     echo "[cfg=${config_idx} run=${run_idx}] tp=${top_p} tm=${temperature} score=${score} time=${wall_time}s status=${status}"
+    echo "  log_dir: ${log_dir}"
+    echo "  work_dir: ${work_dir}"
 }
 # endregion
 
@@ -134,7 +136,10 @@ N_CONFIGS=$(wc -l < "${COMBOS_TMP}" | tr -d '[:space:]')
 echo ""
 echo "=== Grid: ${N_CONFIGS} configs × ${N_RUNS} runs = $((N_CONFIGS * N_RUNS)) experiments ==="
 echo "=== Config: ${CONFIG_JSON} ==="
-echo "=== Output: ${RESULTS_FILE} ==="
+echo "=== Results CSV: ${RESULTS_FILE} ==="
+echo "=== Log dir: ${STORAGE_DIR}/logs ==="
+echo "=== Work dir: ${STORAGE_DIR}/workspace ==="
+echo ""
 
 while IFS=$'\t' read -r config_idx col1 col2; do
     # parse "key=val" pairs
@@ -145,6 +150,7 @@ while IFS=$'\t' read -r config_idx col1 col2; do
     echo "--- Config ${config_idx}/${N_CONFIGS}: top_p=${top_p} temperature=${temperature} ---"
 
     for (( run_idx = 1; run_idx <= N_RUNS; run_idx++ )); do
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting cfg=${config_idx} run=${run_idx}..."
         run_once "${config_idx}" "${run_idx}" "${top_p}" "${temperature}"
         sleep 1
     done
