@@ -121,12 +121,16 @@ PYEOF
     avg_step=$(awk "BEGIN { if (${MAX_STEPS}+0 > 0) printf \"%.3f\", ${wall_time}/${MAX_STEPS}; else print \"NA\" }")
     echo "${score}" > "${log_dir}/.score"
 
-    read -r emissions_kg energy_kwh cc_duration_s < <(CC_DIR="${log_dir}/codecarbon" ${PYTHON} - <<'PYEOF'
+    # Aggregate CodeCarbon CSVs: LLM-call tracker lives in <log>/codecarbon,
+    # heavy-action tracker lives in <log>/env_log/codecarbon. Both must sum.
+    read -r emissions_kg energy_kwh cc_duration_s < <(LOG_DIR="${log_dir}" ${PYTHON} - <<'PYEOF'
 import csv, glob, os
-cc_dir = os.environ["CC_DIR"]
+log_dir = os.environ["LOG_DIR"]
 em = en = du = 0.0
 found = False
-for path in glob.glob(os.path.join(cc_dir, "*.csv")):
+paths = (glob.glob(os.path.join(log_dir, "codecarbon", "*.csv"))
+         + glob.glob(os.path.join(log_dir, "env_log", "codecarbon", "*.csv")))
+for path in paths:
     try:
         with open(path, newline="") as f:
             for row in csv.DictReader(f):
