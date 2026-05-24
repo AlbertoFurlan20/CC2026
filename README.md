@@ -186,6 +186,15 @@ docker compose exec -d bench bash -lc \
 # Then just
 tail -f /data/CC2026_STORAGE_DIR/run_*.log
 ```
+OR
+```bash
+docker compose exec -d bench bash -lc \
+  'mkdir -p /data/CC2026_bestofn && \
+  STORAGE_DIR=/data/CC2026_bestofn \
+  bash scripts/compare_bestofn_codecarbon.sh \
+  > /data/CC2026_bestofn/bestofn_$(date +%s).log 2>&1'
+tail -f /data/CC2026_bestofn/bestofn_*.log
+```
 
 ## Stop everything
 
