@@ -3,9 +3,9 @@
 # Usage: bash scripts/compare_strategies.sh [CONFIG_JSON]
 # - Example: bash scripts/compare_strategies.sh configs/comparison_grid.json
 #
-# Repetti-style JSON-driven grid runner. Each (config × run) appends one
-# long-format row to results/<exp_name>__summary.csv. Best-of-N emerges from
-# n_runs>1 per cell (aggregate post-hoc by config_idx).
+# JSON-driven strategy dispatcher. Bayesian configs are delegated to
+# run_bayesian.py; the existing grid branch appends one long-format row per
+# (config × run) to results/<exp_name>__summary.csv.
 
 set -euo pipefail
 
@@ -15,33 +15,105 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STORAGE_DIR="${STORAGE_DIR:-${REPO_ROOT}}"
 mkdir -p "${STORAGE_DIR}/logs" "${STORAGE_DIR}/workspace"
 
+if [[ "${CONFIG_JSON}" = /* ]]; then
+    CONFIG_PATH="${CONFIG_JSON}"
+else
+    CONFIG_PATH="${REPO_ROOT}/${CONFIG_JSON}"
+fi
+
 # Guard: STORAGE_DIR on docker overlay FS = not bind-mounted, data lost on container rm.
-if df -T "${STORAGE_DIR}" 2>/dev/null | awk 'NR==2 {exit ($2!="overlay")}'; then
+if df -T "${STORAGE_DIR}" 2>/dev/null \
+    | awk 'NR > 1 && $2 == "overlay" { found=1 } END { exit(found ? 0 : 1) }'; then
     echo "ERROR: STORAGE_DIR=${STORAGE_DIR} is on docker overlay FS (not bind-mounted from host)." >&2
     echo "       Data will be lost when container is removed." >&2
     echo "       Fix: add '-v /data:/data' to docker run, or set STORAGE_DIR to a bind-mounted path." >&2
     exit 1
 fi
 
-if [ ! -f "${REPO_ROOT}/${CONFIG_JSON}" ]; then
-    echo "config not found: ${REPO_ROOT}/${CONFIG_JSON}" >&2
+if [ ! -f "${CONFIG_PATH}" ]; then
+    echo "config not found: ${CONFIG_PATH}" >&2
     exit 1
 fi
+
+# Route before loading grid-specific metadata. Existing configs without a
+# search.method remain grid configs for backwards compatibility.
+SEARCH_METHOD=$("${PYTHON}" - "${CONFIG_PATH}" <<'PYEOF'
+import json
+import sys
+
+config_path = sys.argv[1]
+try:
+    with open(config_path, encoding="utf-8") as config_file:
+        config = json.load(config_file)
+except (OSError, json.JSONDecodeError) as exc:
+    print(f"failed to read config {config_path}: {exc}", file=sys.stderr)
+    raise SystemExit(2)
+
+if not isinstance(config, dict):
+    print("config root must be an object", file=sys.stderr)
+    raise SystemExit(2)
+
+search = config.get("search", {})
+if not isinstance(search, dict):
+    print("config field 'search' must be an object", file=sys.stderr)
+    raise SystemExit(2)
+
+method = search.get("method", "grid")
+if not isinstance(method, str) or not method.strip():
+    print("config field 'search.method' must be a non-empty string", file=sys.stderr)
+    raise SystemExit(2)
+
+print(method.strip().lower())
+PYEOF
+)
+
+case "${SEARCH_METHOD}" in
+    grid)
+        ;;
+    bayesian)
+        exec "${PYTHON}" "${REPO_ROOT}/scripts/run_bayesian.py" "${CONFIG_PATH}"
+        ;;
+    *)
+        echo "unsupported search.method '${SEARCH_METHOD}'; expected 'grid' or 'bayesian'" >&2
+        exit 2
+        ;;
+esac
 
 # region load grid from JSON helper
 META_TMP="$(mktemp)"
 COMBOS_TMP="$(mktemp)"
-trap 'rm -f "${META_TMP}" "${COMBOS_TMP}"' EXIT
+cleanup() {
+    local status=$?
+    rm -f -- "${META_TMP}" "${COMBOS_TMP}"
+    trap - EXIT
+    exit "${status}"
+}
+trap cleanup EXIT
 
-${PYTHON} "${REPO_ROOT}/scripts/emit_grid_combos.py" "${REPO_ROOT}/${CONFIG_JSON}" \
+${PYTHON} "${REPO_ROOT}/scripts/emit_grid_combos.py" "${CONFIG_PATH}" \
     > "${COMBOS_TMP}" 2> "${META_TMP}"
 
-# shellcheck disable=SC1090
-source <(grep -E '^[A-Z_]+=' "${META_TMP}")
+# Parse the fixed, known metadata keys as data. Avoid `source`/`eval`: besides
+# executing config-derived text, process substitution can race on older Bash.
+N_RUNS=1
+EXP_NAME=experiment
+OUTPUT_DIR=results
+FIXED_TASK=cifar10
+FIXED_LLM=llama-3.1-8B-Instruct
+FIXED_FAST_LLM=llama-3.1-8B-Instruct
+FIXED_MAX_STEPS=30
+while IFS='=' read -r key value; do
+    case "${key}" in
+        N_RUNS) N_RUNS="${value}" ;;
+        EXP_NAME) EXP_NAME="${value}" ;;
+        OUTPUT_DIR) OUTPUT_DIR="${value}" ;;
+        FIXED_TASK) FIXED_TASK="${value}" ;;
+        FIXED_LLM) FIXED_LLM="${value}" ;;
+        FIXED_FAST_LLM) FIXED_FAST_LLM="${value}" ;;
+        FIXED_MAX_STEPS) FIXED_MAX_STEPS="${value}" ;;
+    esac
+done < "${META_TMP}"
 
-N_RUNS="${N_RUNS:-1}"
-EXP_NAME="${EXP_NAME:-experiment}"
-OUTPUT_DIR="${OUTPUT_DIR:-results}"
 TASK="${FIXED_TASK}"
 LLM_NAME="${FIXED_LLM}"
 FAST_LLM_NAME="${FIXED_FAST_LLM}"

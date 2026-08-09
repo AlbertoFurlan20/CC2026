@@ -1,4 +1,5 @@
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import argparse
@@ -16,6 +17,7 @@ def _build_parser():
     parser.add_argument("--top-p", type=float, default=None)
     parser.add_argument("--best-of", type=int, default=None)
     parser.add_argument("--n-samples", type=int, default=None)
+    parser.add_argument("--temperature", type=float, default=None)
     return parser
 
 
@@ -37,9 +39,16 @@ def test_n_samples_flag_parsed():
     assert args.n_samples == 2
 
 
+def test_temperature_flag_parsed():
+    parser = _build_parser()
+    args = parser.parse_args(["--task", "cifar10", "--temperature", "0.35"])
+    assert args.temperature == 0.35
+
+
 def test_sampling_flags_default_to_none():
     parser = _build_parser()
     args = parser.parse_args(["--task", "cifar10"])
     assert args.top_p is None
     assert args.best_of is None
     assert args.n_samples is None
+    assert args.temperature is None

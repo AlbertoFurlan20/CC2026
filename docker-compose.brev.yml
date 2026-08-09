@@ -1,0 +1,132 @@
+name: ${COMPOSE_PROJECT_NAME:-mlagentbench-brev}
+
+x-mlagentbench-service: &mlagentbench-service
+  image: ${MLAGENTBENCH_IMAGE:-mlagentbench-thesis:brev}
+  build:
+    context: .
+    dockerfile: Dockerfile
+  working_dir: /MLAgentBench
+  volumes:
+    - .:/MLAgentBench
+    - ${BREV_STORAGE_ROOT:-/home/ubuntu/workspace/cc2026-data}:/data
+  init: true
+  ipc: host
+  shm_size: ${CONTAINER_SHM_SIZE:-16gb}
+
+services:
+  vllm:
+    <<: *mlagentbench-service
+    environment:
+      HF_HOME: /data/hf-cache
+      HF_TOKEN_PATH: /run/secrets/hf_token
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      PYTHONUNBUFFERED: "1"
+    secrets:
+      - hf_token
+    ports:
+      - "${VLLM_BIND_ADDRESS:-127.0.0.1}:${VLLM_HOST_PORT:-8002}:8002"
+    command:
+      - conda
+      - run
+      - --no-capture-output
+      - -n
+      - vllm_srv
+      - python
+      - -m
+      - vllm.entrypoints.openai.api_server
+      - --model
+      - ${VLLM_MODEL_ID:-meta-llama/Llama-3.1-8B-Instruct}
+      - --served-model-name
+      - ${VLLM_SERVED_MODEL_NAME:-llama-3.1-8B-Instruct}
+      - --port
+      - "8002"
+      - --host
+      - 0.0.0.0
+      - --tensor-parallel-size
+      - "1"
+      - --gpu-memory-utilization
+      - ${VLLM_GPU_MEMORY_UTILIZATION:-0.60}
+      - --max-model-len
+      - ${VLLM_MAX_MODEL_LEN:-8192}
+      - --max-num-seqs
+      - ${VLLM_MAX_NUM_SEQS:-8}
+      - --max-num-batched-tokens
+      - ${VLLM_MAX_NUM_BATCHED_TOKENS:-8192}
+      - --enable-prefix-caching
+    healthcheck:
+      test:
+        - CMD
+        - conda
+        - run
+        - --no-capture-output
+        - -n
+        - vllm_srv
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/v1/models', timeout=5)"
+      interval: 15s
+      timeout: 10s
+      retries: 60
+      start_period: ${VLLM_HEALTH_START_PERIOD:-600s}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${VLLM_GPU_ID:-0}"]
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  optimizer:
+    <<: *mlagentbench-service
+    depends_on:
+      vllm:
+        condition: service_healthy
+    environment:
+      OPENAI_BASE_URL: http://vllm:8002/v1
+      OPENAI_API_KEY: EMPTY
+      PYTHONUNBUFFERED: "1"
+      STORAGE_DIR: /data
+    command:
+      - conda
+      - run
+      - --no-capture-output
+      - -n
+      - autogpt
+      - python
+      - scripts/run_bayesian.py
+      - ${BAYES_CONFIG:-configs/comparison_bayes.json}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${OPTIMIZER_GPU_ID:-0}"]
+              capabilities: [gpu]
+    restart: "${OPTIMIZER_RESTART_POLICY:-on-failure:3}"
+    stop_grace_period: 2m
+
+  bench:
+    <<: *mlagentbench-service
+    profiles: [debug]
+    depends_on:
+      vllm:
+        condition: service_healthy
+    environment:
+      OPENAI_BASE_URL: http://vllm:8002/v1
+      OPENAI_API_KEY: EMPTY
+      PYTHONUNBUFFERED: "1"
+      STORAGE_DIR: /data
+    command: [sleep, infinity]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${OPTIMIZER_GPU_ID:-0}"]
+              capabilities: [gpu]
+    restart: "no"
+
+secrets:
+  hf_token:
+    file: ${HF_TOKEN_FILE:-/home/ubuntu/workspace/.secrets/huggingface-token}

@@ -18,6 +18,11 @@ Variability Analysis: Stress testing using Apache JMeter to evaluate system stab
 
 Containerized Environment: A fully pre-configured Docker environment (~45GB) with all dependencies, Conda environments, and tools pre-installed.
 
+Bayesian Search: Persistent Optuna TPE optimization for vLLM sampling parameters,
+with strict result validation, resumable SQLite state, and CSV/JSON exports. See
+[BAYESIAN_OPTIMIZATION.md](BAYESIAN_OPTIMIZATION.md); for NVIDIA Brev deployment,
+see [BREV_BAYESIAN_GUIDE.md](BREV_BAYESIAN_GUIDE.md).
+
 # Installation & Setup
 1. Prerequisites
   Docker installed on a machine with NVIDIA GPU support (nvidia-container-toolkit).

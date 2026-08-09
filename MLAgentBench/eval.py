@@ -6,7 +6,7 @@ import sys
 import json
 import dataclasses
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import Any, List, Dict
 from importlib import util
 import argparse
 import importlib 
@@ -181,7 +181,7 @@ class EvaluationResult:
     final_score: float
     total_time: float
     error: str
-    extra: Dict[str, bool]
+    extra: Dict[str, Any]
 
 
 def run_eval(log_folder, benchmark_folder_name, eval_intermediate=False):
@@ -235,16 +235,19 @@ def run_eval(log_folder, benchmark_folder_name, eval_intermediate=False):
                     result.score_steps = list(subsampled_list)
                             
                 folder_path = os.path.join(subdir, 'traces/step_final_files')
+                final_evaluation_error = None
                 try:
                     if os.path.exists(folder_path):
                         module = importlib.import_module(f'MLAgentBench.benchmarks.{benchmark_folder_name}.scripts.eval')
                         eval_final_score = module.get_score(folder_path)
+                        if hasattr(eval_final_score, "item"):
+                            eval_final_score = eval_final_score.item()
                         result.score.append(eval_final_score)
                         result.final_score = eval_final_score
                         print(eval_final_score)
                 except Exception as e:
                     print(e)
-                    pass
+                    final_evaluation_error = f"{type(e).__name__}: {e}"
                 
                 
                 if os.path.exists(os.path.join(subdir, "error.txt")):
@@ -260,6 +263,7 @@ def run_eval(log_folder, benchmark_folder_name, eval_intermediate=False):
                     "error": error(os.path.join(subdir, file)),
                     "json_error": json_error(os.path.join(subdir, file)),
                     "long_prompt_error": long_prompt_error(os.path.join(subdir, file)),
+                    "final_evaluation_error": final_evaluation_error,
                 }
 
                 # --- CodeCarbon hook ---

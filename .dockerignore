@@ -21,3 +21,16 @@ networks/
 .gitignore
 .vscode/
 .idea/
+
+# Credenciales y configuración local: nunca deben entrar en una capa COPY.
+.env
+.env.*
+!.env.brev.example
+.kaggle/
+**/.kaggle/
+.secrets/
+
+# Artefactos persistentes montados por los runners/Compose.
+results/
+logs/
+workspace/
