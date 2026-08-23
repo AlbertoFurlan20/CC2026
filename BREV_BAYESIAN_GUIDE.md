@@ -10,6 +10,16 @@ An optional `bench` service provides an interactive container for diagnostics.
 The Brev Compose file is standalone; do not combine it with the repository's
 existing `docker-compose.yml`.
 
+Two host-side environment presets are included:
+
+- `.env.brev.example` is the conservative shared-GPU/smoke-test preset.
+- `.env.brev.dedicated.example` is tuned for a 2x L40S instance. It assigns
+  vLLM and benchmark training to different GPUs and uses
+  `0.85 / 32 / 16384` serving limits.
+
+The dedicated preset increases serving capacity, not model intelligence. Both
+presets serve the same Llama 3.1 8B model with an 8192-token context window.
+
 The configuration follows NVIDIA's documented Compose GPU reservation format.
 Brev instances include Docker and the NVIDIA Container Toolkit. See the
 [NVIDIA Brev container guide](https://docs.nvidia.com/brev/guides/development-tools/custom-containers).
@@ -44,10 +54,23 @@ it when the instance is deleted. Keep a second copy of important results. See
 
 ## 2. Configure secrets and deployment settings
 
-Store the environment file outside the Git checkout:
+Choose one preset and store the resulting environment file outside the Git
+checkout. For a shared GPU or the first smoke test:
 
 ```bash
 install -m 600 .env.brev.example /home/ubuntu/workspace/.secrets/cc2026-brev.env
+```
+
+For a 2x L40S instance with a dedicated inference GPU and a separate benchmark
+GPU:
+
+```bash
+install -m 600 .env.brev.dedicated.example /home/ubuntu/workspace/.secrets/cc2026-brev.env
+```
+
+Then create the token file and review the selected settings:
+
+```bash
 install -m 600 /dev/null /home/ubuntu/workspace/.secrets/huggingface-token
 nano /home/ubuntu/workspace/.secrets/huggingface-token
 nano /home/ubuntu/workspace/.secrets/cc2026-brev.env
@@ -85,14 +108,30 @@ The most important environment settings are:
 | `VLLM_GPU_ID` | Host GPU assigned to vLLM |
 | `OPTIMIZER_GPU_ID` | Host GPU assigned to benchmark runs |
 | `VLLM_GPU_MEMORY_UTILIZATION` | Fraction of the vLLM GPU reserved by vLLM |
+| `VLLM_MAX_MODEL_LEN` | Maximum context length for one request |
+| `VLLM_MAX_NUM_SEQS` | Maximum number of active sequences in a scheduler iteration |
+| `VLLM_MAX_NUM_BATCHED_TOKENS` | Maximum tokens processed in one scheduler iteration |
+| `CONTAINER_SHM_SIZE` | Shared-memory size available inside each container |
 | `OPTIMIZER_RESTART_POLICY` | Compose restart policy for the controller |
 
 `VLLM_SERVED_MODEL_NAME` must match the logical model name in the Bayesian
 configuration. The default values match the repository's Llama 3.1 8B setup.
 
-### GPU layouts
+### GPU layouts and serving limits
 
-On a single large-memory GPU, both services must use device `0`:
+| Preset | vLLM GPU | Optimizer GPU | VRAM fraction | Context | Sequences | Batched tokens |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Shared/smoke | 0 | 0 | 0.60 | 8192 | 8 | 8192 |
+| Dedicated 2x L40S | 0 | 1 | 0.85 | 8192 | 32 | 16384 |
+
+For the intended Brev deployment, prefer 2x L40S. Each L40S has 48 GB of GPU
+memory, so the 0.85 vLLM limit gives the inference process roughly 40.8 GB while
+leaving the second GPU entirely available to benchmark training. The L40S does
+not provide NVLink; Llama 3.1 8B fits on one card, so tensor parallelism remains
+one and there is no reason to split this model across both cards. See NVIDIA's
+[L40S specifications](https://www.nvidia.com/en-us/data-center/l40s/).
+
+On a single sufficiently large-memory GPU, both services use device `0`:
 
 ```dotenv
 VLLM_GPU_ID=0
@@ -100,20 +139,43 @@ OPTIMIZER_GPU_ID=0
 VLLM_GPU_MEMORY_UTILIZATION=0.60
 ```
 
-Start conservatively because vLLM and benchmark training share VRAM. Raise the
-utilization only after a smoke run confirms there is enough headroom.
+Start conservatively because vLLM and benchmark training share VRAM. The
+unquantized 8B model may not fit inside a 60% reservation on a 24 GB card; in
+that case use separate GPUs, a larger inference GPU, or a quantized checkpoint.
+Do not copy the dedicated preset's 0.85 reservation onto a shared GPU.
 
-On a two-GPU instance, isolate inference and training:
+On a 2x L40S instance, isolate inference and training:
 
 ```dotenv
 VLLM_GPU_ID=0
 OPTIMIZER_GPU_ID=1
 VLLM_GPU_MEMORY_UTILIZATION=0.85
+VLLM_MAX_MODEL_LEN=8192
+VLLM_MAX_NUM_SEQS=32
+VLLM_MAX_NUM_BATCHED_TOKENS=16384
 ```
+
+`max-num-seqs=32` and `max-num-batched-tokens=16384` are concurrency ceilings;
+they do not make an individual model response smarter. The current Bayesian
+controller submits trials sequentially, so the larger values mainly provide
+headroom for future concurrent clients. If vLLM reports preemption or CUDA
+out-of-memory, lower the batched-token budget to 8192. If you later add many
+concurrent clients, load-test 32768 rather than assuming it is faster:
+
+```dotenv
+VLLM_MAX_NUM_BATCHED_TOKENS=32768
+```
+
+The Compose command enables prefix caching for repeated agent prefixes and
+chunked prefill for fairer scheduling of long prompts alongside decode work.
+These controls and their tradeoffs are described in the pinned
+[vLLM 0.13 optimization guide](https://docs.vllm.ai/en/v0.13.0/configuration/optimization/)
+and [serve-argument reference](https://docs.vllm.ai/en/v0.13.0/cli/serve/).
 
 This Compose profile intentionally assigns one GPU to each service and fixes
 vLLM tensor parallelism to one. A model requiring multi-GPU tensor parallelism
-needs a separate Compose variant.
+needs a separate Compose variant with multiple reserved inference devices and
+another GPU for benchmark training.
 
 ## 3. Validate and build
 
