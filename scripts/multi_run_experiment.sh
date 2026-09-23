@@ -1,53 +1,50 @@
-#!/usr/bin/env bash
-# Usage: bash multi_run_experiment.sh <exp_path> <task> <num_runs> <num_workers> [extra_args...]
-#
-# Runs <num_runs> independent multi-agent experiments for <task>.
-# Each run spawns <num_workers> parallel worker agents internally.
-#
-# Example:
-#   bash multi_run_experiment.sh logs/cifar10 cifar10 3 4 --llm-name qwen2.5-7b-instruct
+#/bin/bash
 
-set -euo pipefail
 
 exp_path=$1
 task=$2
-num_runs=$3
-num_workers=$4
-shift 4
+n_device=$3
+shift 3
 
-extra_args="${*}"
+declare -a devices=()
+
+# Get X numbers
+for (( i=0; i<$n_device; i++ ))
+do
+  devices+=($1)
+  shift
+done
+
+extra_args="${@}"
+folder=$exp_path
 python=$(which python)
 
-echo "exp_path:    $exp_path"
-echo "task:        $task"
-echo "num_runs:    $num_runs"
-echo "num_workers: $num_workers"
-echo "extra_args:  $extra_args"
-echo "Logs saved to $exp_path/run_<timestamp>/"
+echo "exp_path: $exp_path"
+echo "task: $task"
+echo "n_devices: $n_device"
+echo "devcies: ${devices[@]}"
+echo "extra_args: $extra_args"
 
-for (( i=0; i<num_runs; i++ ))
-do
+echo "Logs will be saved to $folder"
+
+for i in "${devices[@]}"
+do 
+
     ts=$(date +%s)
-    run_dir="$exp_path/run_$ts"
-    work_dir="workspaces/$run_dir"
 
-    mkdir -p "$run_dir" "$work_dir"
+    if [ -d $folder/$ts ]; then
+        echo "Folder $folder/$ts already exists. removing it"
+        rm -rf $folder/$ts
+    fi
+    mkdir -p $folder/$ts
 
-    echo "[Run $((i+1))/$num_runs] log → $run_dir/log"
 
-    $python -u -m MLAgentBench.prepare_task "$task" "$python"
+    python -u -m MLAgentBench.prepare_task $task $python
+    echo "python -u -m MLAgentBench.runner --python $python --task $task --device $i --log-dir $folder/$ts  --work-dir workspaces/$folder/$ts ${extra_args} > $folder/$ts/log 2>&1"
+    eval "python -u -m MLAgentBench.runner --python $python --task $task --device $i --log-dir $folder/$ts  --work-dir workspaces/$folder/$ts ${extra_args}" > $folder/$ts/log 2>&1 &
 
-    $python -u -m MLAgentBench.runner \
-        --python "$python" \
-        --task "$task" \
-        --log-dir "$run_dir" \
-        --work-dir "$work_dir" \
-        --num-workers "$num_workers" \
-        $extra_args \
-        > "$run_dir/log" 2>&1 &
 
     sleep 2
 done
-
 wait
-echo "All $num_runs runs complete."
+
