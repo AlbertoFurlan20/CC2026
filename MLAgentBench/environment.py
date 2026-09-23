@@ -327,7 +327,7 @@ class Environment:
             except TooLongPromptError:
                 return "EnvError: too long input for the tool"
             except LLMError as e:
-                return "LLMError: " + e.message
+                return "LLMError: " + str(e)
             except EnvException as e:
                 return "EnvError: " + e.message
             except TypeError as e:

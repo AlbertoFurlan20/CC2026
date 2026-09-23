@@ -330,6 +330,10 @@ OPENAI_BASE_URL = (
     or os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:8002/v1")
 )
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "test")
+SAMPLING_TOP_P: float | None = None
+SAMPLING_BEST_OF: int | None = None
+SAMPLING_N: int | None = None
+SAMPLING_TEMPERATURE: float | None = None
 
 # Config para openai==0.28.x
 openai.api_base = OPENAI_BASE_URL
@@ -372,8 +376,8 @@ def complete_text_openai(
     prompt,
     stop_sequences=None,
     model="gpt-3.5-turbo",
-    max_tokens_to_sample=300, #Change it dependending on the model context length 
-    temperature=0.2,          #if we use the complete prompt (300) or just thought action action input (500)
+    max_tokens_to_sample=2000,
+    temperature=0.2,
     log_file=None,
     **kwargs,
 ):
@@ -390,13 +394,20 @@ def complete_text_openai(
     # Logical mapping -> real name in vLLM
     mapped_model = _map_logical_to_vllm_model(model)
 
+    effective_temperature = SAMPLING_TEMPERATURE if SAMPLING_TEMPERATURE is not None else temperature
     raw_request = {
         "model": mapped_model,
-        "temperature": temperature,
+        "temperature": effective_temperature,
         "max_tokens": max_tokens_to_sample,
         "stop": stop_sequences or None,  # API dont wants an empty list
         **kwargs,
     }
+    if SAMPLING_TOP_P is not None:
+        raw_request["top_p"] = SAMPLING_TOP_P
+    if SAMPLING_BEST_OF is not None:
+        raw_request["best_of"] = SAMPLING_BEST_OF
+    if SAMPLING_N is not None:
+        raw_request["n"] = SAMPLING_N
 
     messages = [{"role": "user", "content": prompt}]
     response = openai.ChatCompletion.create(messages=messages, **raw_request)

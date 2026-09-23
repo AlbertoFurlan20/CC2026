@@ -122,11 +122,15 @@ if __name__ == "__main__":
     parser.add_argument("--langchain-agent", type=str, default="zero-shot-react-description", help="langchain agent")
     
     # Codecarbon configs
-    # Codecarbon is an optional dependency, so we use a flag to enable it in case the user has it installed. 
+    # Codecarbon is an optional dependency, so we use a flag to enable it in case the user has it installed.
     # If the user enables it but it's not installed, we'll print a warning and continue without it.
     parser.add_argument("--use-codecarbon", action="store_true",help="Active measure with CodeCarbon if its installed(default is disabled).")
 
-
+    # vLLM sampling parameters
+    parser.add_argument("--top-p", type=float, default=None, help="vLLM top_p sampling parameter")
+    parser.add_argument("--best-of", type=int, default=None, help="vLLM best_of: candidates generated, best returned")
+    parser.add_argument("--n-samples", type=int, default=None, help="vLLM n: number of sequences per request")
+    parser.add_argument("--temperature", type=float, default=None, help="vLLM temperature override (applies to LLM calls in agent loop)")
 
     args = parser.parse_args()
     print(args, file=sys.stderr)
@@ -134,5 +138,8 @@ if __name__ == "__main__":
         # should not use these actions when there is no retrieval
         args.actions_remove_from_prompt.extend(["Retrieval from Research Log", "Append Summary to Research Log", "Reflection"])
     LLM.FAST_MODEL = args.fast_llm_name
+    LLM.SAMPLING_TOP_P = args.top_p
+    LLM.SAMPLING_BEST_OF = args.best_of
+    LLM.SAMPLING_N = args.n_samples
+    LLM.SAMPLING_TEMPERATURE = args.temperature
     run(getattr(sys.modules[__name__], args.agent_type), args)
-    
