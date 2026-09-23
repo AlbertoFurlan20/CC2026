@@ -6,7 +6,7 @@ import sys
 import json
 import dataclasses
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import Any, List, Dict
 from importlib import util
 import argparse
 import importlib 
@@ -125,29 +125,50 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 def oom_error(path):
-    log = path.replace("trace.json", "../log")
-    main_log = path.replace("trace.json", "../agent_log/main_log")
+    env_log_dir = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+    log = os.path.join(env_log_dir, "log")
+    main_log = os.path.join(env_log_dir, "agent_log", "main_log")
     message = "CUDA out of memory"
-    return (message in open(log, "r").read()) or (message in open(main_log, "r").read())
+    log_content = ""
+    main_log_content = ""
+    if os.path.exists(log):
+        log_content = open(log, "r").read()
+    if os.path.exists(main_log):
+        main_log_content = open(main_log, "r").read()
+    return (message in log_content) or (message in main_log_content)
     
 
 def connection_error(path):
-    log = path.replace("trace.json", "../log")
-    main_log = path.replace("trace.json", "../agent_log/main_log")
+    env_log_dir = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+    log = os.path.join(env_log_dir, "log")
+    main_log = os.path.join(env_log_dir, "agent_log", "main_log")
     bad = ["You exceeded your current quota, please check your plan and billing details.", "Error: 'text-similarity-ada-001'", "Error: 'text-embedding-ada-001'"]
-    return ("Connection aborted" in open(log, "r").read()) or (any([b in open(main_log, "r").read() for b in bad])) 
+    log_content = ""
+    main_log_content = ""
+    if os.path.exists(log):
+        log_content = open(log, "r").read()
+    if os.path.exists(main_log):
+        main_log_content = open(main_log, "r").read()
+    return ("Connection aborted" in log_content) or (any([b in main_log_content for b in bad])) 
 
 def error(path):
-    return os.path.exists(os.path.join(path.replace("trace.json", ""), "error.txt")) or not os.path.exists(os.path.join(path.replace("trace.json", ""), "overall_time.txt"))
+    step_files_dir = os.path.dirname(path)
+    return os.path.exists(os.path.join(step_files_dir, "error.txt")) or not os.path.exists(os.path.join(step_files_dir, "overall_time.txt"))
 
 
 def json_error(path):
-    main_log = path.replace("trace.json", "../agent_log/main_log")
-    return open(main_log, "r").read().count("JSONDecodeError") > 2
+    env_log_dir = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+    main_log = os.path.join(env_log_dir, "agent_log", "main_log")
+    if os.path.exists(main_log):
+        return open(main_log, "r").read().count("JSONDecodeError") > 2
+    return False
 
 def long_prompt_error(path):
-    main_log = path.replace("trace.json", "../agent_log/main_log")
-    return "EnvError: too long input for the tool" in open(main_log, "r").read()
+    env_log_dir = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+    main_log = os.path.join(env_log_dir, "agent_log", "main_log")
+    if os.path.exists(main_log):
+        return "EnvError: too long input for the tool" in open(main_log, "r").read()
+    return False
 
 @dataclass
 class EvaluationResult:
@@ -160,7 +181,7 @@ class EvaluationResult:
     final_score: float
     total_time: float
     error: str
-    extra: Dict[str, bool]
+    extra: Dict[str, Any]
 
 
 def run_eval(log_folder, benchmark_folder_name, eval_intermediate=False):
@@ -214,16 +235,19 @@ def run_eval(log_folder, benchmark_folder_name, eval_intermediate=False):
                     result.score_steps = list(subsampled_list)
                             
                 folder_path = os.path.join(subdir, 'traces/step_final_files')
+                final_evaluation_error = None
                 try:
                     if os.path.exists(folder_path):
                         module = importlib.import_module(f'MLAgentBench.benchmarks.{benchmark_folder_name}.scripts.eval')
                         eval_final_score = module.get_score(folder_path)
+                        if hasattr(eval_final_score, "item"):
+                            eval_final_score = eval_final_score.item()
                         result.score.append(eval_final_score)
                         result.final_score = eval_final_score
                         print(eval_final_score)
                 except Exception as e:
                     print(e)
-                    pass
+                    final_evaluation_error = f"{type(e).__name__}: {e}"
                 
                 
                 if os.path.exists(os.path.join(subdir, "error.txt")):
@@ -239,6 +263,7 @@ def run_eval(log_folder, benchmark_folder_name, eval_intermediate=False):
                     "error": error(os.path.join(subdir, file)),
                     "json_error": json_error(os.path.join(subdir, file)),
                     "long_prompt_error": long_prompt_error(os.path.join(subdir, file)),
+                    "final_evaluation_error": final_evaluation_error,
                 }
 
                 # --- CodeCarbon hook ---

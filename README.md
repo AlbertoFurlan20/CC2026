@@ -10,17 +10,20 @@ By performing the clone of the repository, be aware that it already contains all
 For a complete guide step by step please read the "Guide -MLAgentBench user manual.pdf" file
 
 ## Key Features
-**Multi-Agent Parallel Execution:** An OrchestratorAgent spawns N WorkerAgents in parallel, each operating in an isolated workspace. The best result is selected at completion via eval-loss scoring.
+Local Model Support: Seamless integration with Llama 3.1-8B and Qwen-2.5-7B using the vLLM inference engine.
 
-**Supervisor-Driven Model Upgrade:** A SupervisorAgent monitors a shared Whiteboard for worker stagnation. When detected, it cancels current workers and re-spawns them with a heavier model (`--heavy-llm-name`).
+Green AI Monitoring: Integrated CodeCarbon to track real-time energy consumption (GPU, CPU, RAM) and CO2 emissions per agent action.
 
-**Local Model Support:** Seamless integration with Llama 3.1-8B and Qwen-2.5-7B via the vLLM inference engine using an OpenAI-compatible API.
+Rigid Prompting Strategy: Implementation of a "Rigid" structured prompt format that significantly reduces hallucinations and loops, increasing success rates for 7B/8B models.
 
-**Workspace Isolation:** Each worker operates in a fully isolated directory copy, preventing interference between parallel runs.
+Variability Analysis: Stress testing using Apache JMeter to evaluate system stability and response consistency under concurrent loads.
 
-**Variability Analysis:** Stress testing using Apache JMeter to evaluate system stability and response consistency under concurrent loads.
+Containerized Environment: A fully pre-configured Docker environment (~45GB) with all dependencies, Conda environments, and tools pre-installed.
 
-**Containerized Environment:** A fully pre-configured Docker environment (~45GB) with all dependencies, Conda environments, and tools pre-installed.
+Bayesian Search: Persistent Optuna TPE optimization for vLLM sampling parameters,
+with strict result validation, resumable SQLite state, and CSV/JSON exports. See
+[BAYESIAN_OPTIMIZATION.md](BAYESIAN_OPTIMIZATION.md); for NVIDIA Brev deployment,
+see [BREV_BAYESIAN_GUIDE.md](BREV_BAYESIAN_GUIDE.md).
 
 ## Installation & Setup
 1. Prerequisites
@@ -75,6 +78,21 @@ python -m vllm.entrypoints.openai.api_server \
   --max-num-batched-tokens 2048
 ```
 
+Step 1: Start the Inference Server (vLLM)
+```bash
+conda activate vllm_srv
+export HF_TOKEN="<your_hf_token>" && python -m vllm.entrypoints.openai.api_server \
+    --model meta-llama/Llama-3.1-8B-Instruct \                                                                                              
+    --served-model-name llama-3.1-8B-Instruct \                                                                                             
+    --port 8002 \                                                                                                                           
+    --tensor-parallel-size 1 \                                                                                                              
+    --gpu-memory-utilization 0.85 \                                                                                                         
+    --max-model-len 8192 \                                                                                                                  
+    --max-num-seqs 32 \                                                                                                                     
+    --max-num-batched-tokens 32768 \                                                                                                        
+    --enable-prefix-caching
+```
+
 Brief note: vLLM performs routing to 2+ models, so you shall serve 2 models, as below
 
 Complete setup:
@@ -100,35 +118,121 @@ python -m MLAgentBench.prepare_task cifar10 $(which python)
 
 Note: if you get already prepared, you can `rm -rf /MLAgentBench/MLAgentBench/benchmarks/cifar10/scripts/prepared`.
 
-### 2. Run the multi-agent orchestrator
+### 2. Run the agent
+```bash
+python -m MLAgentBench.runner \
+  --task cifar10 --llm-name llama-3.1-8B-Instruct --device 0
+```
+
+For the quantized version:
 ```bash
 python -m MLAgentBench.runner \
   --task cifar10 \
-  --llm-name qwen2.5-7B-Instruct \
-  --fast-llm-name qwen2.5-7B-Instruct \
-  --edit-script-llm-name qwen2.5-7B-Instruct \
-  --heavy-llm-name llama-3.1-8B-Instruct \
-  --num-workers 4 \
-  --device 0
-```
-
-`--num-workers` controls how many WorkerAgents run in parallel. `--heavy-llm-name` sets the model the supervisor upgrades to on stagnation.
-
-To run multiple independent experiments (e.g., 3 runs × 4 workers):
-```bash
-bash scripts/multi_run_experiment.sh logs/cifar10 cifar10 3 4 \
-  --llm-name qwen2.5-7B-Instruct \
-  --heavy-llm-name llama-3.1-8B-Instruct
+  --llm-name llama-3.1-8B-Instruct \
+  --edit-script-llm-name llama-3.1-8B-Instruct \
+  --fast-llm-name llama-3.1-8B-Instruct \
+  --device 0 \
+  --use-codecarbon \
+  --valid-format-entires Thought Action "Action Input"
 ```
 
 ## Notes on run
 Halting conditions:
 
+## Detached Execution (Docker Compose)
+
+For long runs on a remote VM where you need to disconnect SSH and let the
+container keep running until the experiment finishes, use the provided
+`docker-compose.yml`. It defines two services:
+
+- `vllm` — inference server on port 8002 (GPU)
+- `bench` — idle container for running comparison scripts, talks to `vllm`
+  via service DNS (`OPENAI_BASE_URL=http://vllm:8002/v1`)
+
+### One-time setup on the VM
+
+```bash
+cp .env.example .env
+# edit .env and set HF_TOKEN=hf_...
+```
+
+The image must already be built locally (`docker build -t mlagentbench-thesis .`).
+
+### Run detached
+
+```bash
+# 1. Start vLLM detached. Container survives SSH disconnect (Docker daemon
+#    owns the process, not your shell).
+docker compose up -d vllm
+
+# 2. Wait until healthy. The bench service depends on the vLLM healthcheck
+#    (HTTP GET /v1/models). You can poll status:
+docker compose ps
+
+# 3. Start the bench container (idle, also detached).
+docker compose up -d bench
+
+# 4. Launch a comparison script detached inside bench, redirecting output
+#    to a log file in the bind-mounted repo.
+docker compose exec -d bench bash -lc \
+  'bash scripts/compare_strategies_codecarbon.sh > logs/bench_$(date +%s).log 2>&1'
+
+# or the Best-of-N script:
+docker compose exec -d bench bash -lc \
+  'bash scripts/compare_bestofn_codecarbon.sh > logs/bench_$(date +%s).log 2>&1'
+
+# 5. Safe to disconnect.
+exit
+```
+
+### Reattach later
+
+```bash
+ssh vm
+docker compose ps                   # status of both services
+docker compose logs -f vllm         # live vLLM logs
+tail -f logs/bench_*.log            # live bench script logs
+```
+
+### Refs Alberto's vm (ease-of-life)
+```bash
+docker compose exec -d bench bash -lc \
+    'mkdir -p /data/CC2026_STORAGE_DIR && \
+    STORAGE_DIR=/data/CC2026_STORAGE_DIR \
+    bash scripts/compare_strategies_codecarbon.sh > /data/CC2026_STORAGE_DIR/run_$(date +%s).log 2>&1'
+# Then just
+tail -f /data/CC2026_STORAGE_DIR/run_*.log
+```
+OR
+```bash
+docker compose exec -d bench bash -lc \
+  'mkdir -p /data/CC2026_bestofn && \
+  STORAGE_DIR=/data/CC2026_bestofn \
+  bash scripts/compare_bestofn_codecarbon.sh \
+  > /data/CC2026_bestofn/bestofn_$(date +%s).log 2>&1'
+tail -f /data/CC2026_bestofn/bestofn_*.log
+```
+
+### Stop everything
+
+```bash
+docker compose down
+```
+
+Notes:
+- vLLM is bound to `0.0.0.0` so the `bench` container can reach it at
+  `vllm:8002`. The host-side port `8002` is also published for debugging.
+- Both containers share the GPU. vLLM reserves 85% of GPU memory; the
+  benchmark training task uses the rest. Lower `--gpu-memory-utilization`
+  in `docker-compose.yml` if you hit OOM.
+- HuggingFace weights are cached in the named volume `hf_cache` so model
+  downloads survive container restarts.
+
 ## Research Highlights
 
-**Multi-Agent Scaling:** Parallel worker execution across N agents increases benchmark coverage and solution diversity compared to single-agent runs, with the best result selected by eval-loss scoring.
+Prompt Engineering: Moving from standard prompts to Rigid Prompts improved Qwen-2.5-7B's success rate from 19.4% to 55.6%.
 
-**Supervisor-Triggered Upgrade:** Stagnation detection (N consecutive identical actions) triggers a mid-run model upgrade to a heavier LLM, recovering stuck workers without restarting from scratch.
+Energy Footprint: Research showed that 89% of the total energy consumption is concentrated in "Edit Script" and "Execute Script" actions.
 
-**Operational Efficiency:** Local deployment with vLLM offers a sustainable and private alternative to cloud-based LLM APIs for automated software engineering.
-
+Operational Efficiency: Local deployment offers a sustainable and private alternative to cloud-based LLM APIs for automated software engineering.
+"\n Test" 
